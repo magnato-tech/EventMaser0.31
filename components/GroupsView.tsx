@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { AppState, Group, GroupCategory, GroupRole, GroupMember, ServiceRole, UUID, Person, CoreRole, GatheringPattern, OccurrenceStatus, EventOccurrence, Assignment } from '../types';
-// Added Trash2 to imports from lucide-react to fix missing dependency
-import { Users, Shield, Heart, Plus, X, Search, Edit2, Star, Library, ChevronDown, Calendar, Repeat, ShieldCheck, Link as LinkIcon, ExternalLink, ListChecks, Mail, Phone, ArrowLeft, Clock, CheckCircle2, ChevronRight, User, Trash2 } from 'lucide-react';
+import { Users, Shield, Heart, Plus, X, Search, Edit2, Star, Library, ChevronDown, Calendar, Repeat, ShieldCheck, Link as LinkIcon, ExternalLink, ListChecks, Mail, Phone, ArrowLeft, Clock, CheckCircle2, ChevronRight, User, Trash2, FileText } from 'lucide-react';
 
 interface Props {
   db: AppState;
@@ -226,7 +225,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
       serviceRoles: prev.serviceRoles.map(r => r.id === viewingRoleId ? {
         ...r,
         name: formData.get('name') as string,
-        description: formData.get('description') as string,
+        // Vi beholder feltet i DB men brukeren trenger ikke redigere det her hvis de vil "droppe boksen"
         default_instructions: (formData.get('instructions') as string).split('\n').filter(t => t.trim())
       } : r)
     }));
@@ -236,7 +235,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
   const handleCreateServiceRole = (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
-    const newRole: ServiceRole = { id: crypto.randomUUID(), name: formData.get('name') as string, description: formData.get('description') as string, default_instructions: (formData.get('instructions') as string).split('\n').filter(t => t.trim()), is_active: true };
+    const newRole: ServiceRole = { id: crypto.randomUUID(), name: formData.get('name') as string, description: '', default_instructions: (formData.get('instructions') as string).split('\n').filter(t => t.trim()), is_active: true };
     setDb(prev => ({ ...prev, serviceRoles: [...prev.serviceRoles, newRole] }));
     setIsCreateServiceRoleModalOpen(false);
   };
@@ -397,19 +396,35 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
               <button onClick={() => setIsCreateServiceRoleModalOpen(true)} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow flex items-center gap-2 transition-all"><Plus size={16} /> Ny Katalogrolle</button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {filteredRoles.map(sr => (
               <button 
                 key={sr.id} 
                 onClick={() => setViewingRoleId(sr.id)}
-                className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all text-left group"
+                className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all text-left group flex flex-col justify-between h-full min-h-[110px]"
               >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"><Library size={18} /></div>
-                  {isAdmin && <div className="p-1.5 text-slate-400 group-hover:text-indigo-600 transition-colors"><Edit2 size={14} /></div>}
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="p-1.5 bg-indigo-50 rounded-lg text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                      <Library size={14} />
+                    </div>
+                    {isAdmin && (
+                      <div className="p-1 text-slate-300 group-hover:text-indigo-600 transition-colors">
+                        <Edit2 size={12} />
+                      </div>
+                    )}
+                  </div>
+                  <h4 className="font-bold text-slate-800 text-[13px] leading-tight line-clamp-2">{sr.name}</h4>
                 </div>
-                <h4 className="font-bold text-slate-800 mb-1">{sr.name}</h4>
-                <p className="text-xs text-slate-500 line-clamp-2">{sr.description || 'Ingen beskrivelse.'}</p>
+                
+                <div className="mt-2 flex items-center justify-end">
+                  {sr.default_instructions.length > 0 && (
+                    <div className="flex items-center gap-1 text-indigo-500" title="Instrukser tilgjengelig">
+                      <ListChecks size={14} />
+                      <span className="text-[9px] font-bold uppercase tracking-tighter">Instruks</span>
+                    </div>
+                  )}
+                </div>
               </button>
             ))}
           </div>
@@ -534,13 +549,11 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
               {isAdmin ? (
                 <>
                   <div><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Rollenavn</label><input required name="name" defaultValue={viewedRole.name} className="w-full px-4 py-2 bg-slate-50 border rounded-xl text-sm font-bold" /></div>
-                  <div><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Beskrivelse</label><textarea name="description" defaultValue={viewedRole.description || ''} className="w-full px-4 py-2 bg-slate-50 border rounded-xl text-sm h-24" /></div>
                   <div><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Standard Instrukser (per linje)</label><textarea name="instructions" defaultValue={viewedRole.default_instructions.join('\n')} className="w-full px-4 py-2 bg-slate-50 border rounded-xl text-sm h-48 font-medium" /></div>
                   <button type="submit" className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-indigo-700 transition-all">Lagre Endringer</button>
                 </>
               ) : (
                 <div className="space-y-6">
-                  {viewedRole.description && (<div><h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Om rollen</h4><p className="text-sm text-slate-600 leading-relaxed">{viewedRole.description}</p></div>)}
                   <div>
                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><ListChecks size={14}/> Sjekkliste / Instrukser</h4>
                     <div className="space-y-3">
@@ -566,7 +579,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
 
       {/* Ny Katalogrolle Modal */}
       {isCreateServiceRoleModalOpen && (
-        <div className="fixed inset-0 z-[140] flex items-center justify-center p-4"><div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsCreateServiceRoleModalOpen(false)}></div><div className="relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden text-left animate-in zoom-in-95"><div className="p-6 bg-indigo-700 text-white flex justify-between items-center"><h3 className="text-xl font-bold">Ny Katalogrolle</h3><button onClick={() => setIsCreateServiceRoleModalOpen(false)}><X size={24} /></button></div><form onSubmit={handleCreateServiceRole} className="p-8 space-y-4"><div><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Navn</label><input autoFocus required name="name" type="text" className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="f.eks. Møteleder" /></div><div><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Beskrivelse</label><textarea name="description" className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm h-24" placeholder="Beskrivelse..." /></div><div><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Instrukser (per linje)</label><textarea name="instructions" className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm h-32" /></div><button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-all">Opprett Rolle</button></form></div></div>
+        <div className="fixed inset-0 z-[140] flex items-center justify-center p-4"><div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsCreateServiceRoleModalOpen(false)}></div><div className="relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden text-left animate-in zoom-in-95"><div className="p-6 bg-indigo-700 text-white flex justify-between items-center"><h3 className="text-xl font-bold">Ny Katalogrolle</h3><button onClick={() => setIsCreateServiceRoleModalOpen(false)}><X size={24} /></button></div><form onSubmit={handleCreateServiceRole} className="p-8 space-y-4"><div><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Navn</label><input autoFocus required name="name" type="text" className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="f.eks. Møteleder" /></div><div><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Instrukser (per linje)</label><textarea name="instructions" className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm h-32" /></div><button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-all">Opprett Rolle</button></form></div></div>
       )}
       
       {/* Rediger Person Modal */}
