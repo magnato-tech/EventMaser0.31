@@ -1,17 +1,19 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { AppState, Group, GroupCategory, GroupRole, GroupMember, ServiceRole, UUID, Person, CoreRole, GatheringPattern, OccurrenceStatus, EventOccurrence, Assignment } from '../types';
-import { Users, Shield, Heart, Plus, X, Search, Edit2, Star, Library, ChevronDown, Calendar, Repeat, ShieldCheck, Link as LinkIcon, ExternalLink, ListChecks, Mail, Phone, ArrowLeft, Clock, CheckCircle2, ChevronRight, User, Trash2, FileText, Info } from 'lucide-react';
+import { AppState, Group, GroupCategory, GroupRole, GroupMember, ServiceRole, UUID, Person, CoreRole, GatheringPattern, OccurrenceStatus, EventOccurrence, Assignment, Family, FamilyMember, FamilyRole } from '../types';
+import { Users, Shield, Heart, Plus, X, Search, Edit2, Star, Library, ChevronDown, Calendar, Repeat, ShieldCheck, Link as LinkIcon, ExternalLink, ListChecks, Mail, Phone, ArrowLeft, Clock, CheckCircle2, ChevronRight, User, Trash2, FileText, Info, UserPlus, MapPin, Home, Save, Baby } from 'lucide-react';
 
 interface Props {
   db: AppState;
   setDb: React.Dispatch<React.SetStateAction<AppState>>;
   isAdmin: boolean;
   initialViewGroupId?: UUID | null;
+  initialPersonId?: UUID | null;
+  onViewPerson?: (personId: UUID) => void;
 }
 
-const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId }) => {
-  const [activeTab, setActiveTab] = useState<GroupCategory | 'persons' | 'roles'>(GroupCategory.SERVICE);
+const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, initialPersonId, onViewPerson }) => {
+  const [activeTab, setActiveTab] = useState<'persons' | 'families' | 'fellowship' | 'service' | 'leadership' | 'roles'>('persons');
   
   // Modal & View States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -22,6 +24,27 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
   const [viewingRoleId, setViewingRoleId] = useState<UUID | null>(null);
   const [isCreatePersonModalOpen, setIsCreatePersonModalOpen] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+  
+  // Familie States
+  const [isCreateFamilyModalOpen, setIsCreateFamilyModalOpen] = useState(false);
+  const [newFamilyName, setNewFamilyName] = useState('');
+  const [newlyCreatedFamilyId, setNewlyCreatedFamilyId] = useState<UUID | null>(null);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [selectedFamilyForMember, setSelectedFamilyForMember] = useState<UUID | null>(null);
+  const [memberPersonSearch, setMemberPersonSearch] = useState('');
+  const [memberPersonId, setMemberPersonId] = useState<UUID | null>(null);
+  const [memberFamilyRole, setMemberFamilyRole] = useState<FamilyRole>(FamilyRole.CHILD);
+  const [memberIsSecondaryResidence, setMemberIsSecondaryResidence] = useState(false);
+  const [isNewPerson, setIsNewPerson] = useState(false);
+  const [newPersonEmail, setNewPersonEmail] = useState('');
+  const [newPersonPhone, setNewPersonPhone] = useState('');
+  const [newPersonBirthYear, setNewPersonBirthYear] = useState('');
+  const [newPersonBirthDate, setNewPersonBirthDate] = useState('');
+  const [viewingFamilyId, setViewingFamilyId] = useState<UUID | null>(null);
+  const [isEditingFamilyAddress, setIsEditingFamilyAddress] = useState(false);
+  const [editingFamilyStreetAddress, setEditingFamilyStreetAddress] = useState('');
+  const [editingFamilyPostalCode, setEditingFamilyPostalCode] = useState('');
+  const [editingFamilyCity, setEditingFamilyCity] = useState('');
 
   // Samlingsplanlegging State (Manage mode only)
   const [tempPattern, setTempPattern] = useState<GatheringPattern | null>(null);
@@ -36,7 +59,12 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
   const [personSearch, setPersonSearch] = useState('');
   const [roleSearch, setRoleSearch] = useState('');
 
-  const filteredGroups = db.groups.filter(g => g.category === activeTab);
+  const filteredGroups = useMemo(() => {
+    if (activeTab === 'service') return db.groups.filter(g => g.category === GroupCategory.SERVICE);
+    if (activeTab === 'fellowship') return db.groups.filter(g => g.category === GroupCategory.FELLOWSHIP);
+    if (activeTab === 'leadership') return db.groups.filter(g => g.category === GroupCategory.STRATEGY);
+    return [];
+  }, [db.groups, activeTab]);
   const managedGroup = db.groups.find(g => g.id === manageGroupId);
   const viewedGroup = db.groups.find(g => g.id === viewingGroupId);
   const viewedRole = db.serviceRoles.find(r => r.id === viewingRoleId);
@@ -47,6 +75,28 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
       setViewingGroupId(initialViewGroupId);
     }
   }, [initialViewGroupId]);
+
+  useEffect(() => {
+    if (initialPersonId) {
+      setSelectedPersonId(initialPersonId);
+      setActiveTab('persons');
+    }
+  }, [initialPersonId]);
+
+  // Reset form state når "Legg til medlem"-modalen åpnes
+  useEffect(() => {
+    if (isAddMemberModalOpen) {
+      setMemberPersonSearch('');
+      setMemberPersonId(null);
+      setMemberFamilyRole(FamilyRole.CHILD);
+      setMemberIsSecondaryResidence(false);
+      setIsNewPerson(false);
+      setNewPersonEmail('');
+      setNewPersonPhone('');
+      setNewPersonBirthYear('');
+      setNewPersonBirthDate('');
+    }
+  }, [isAddMemberModalOpen]);
 
   useEffect(() => {
     if (manageGroupId) {
@@ -63,6 +113,17 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
       }
     }
   }, [manageGroupId, db.groups]);
+
+  useEffect(() => {
+    if (viewingFamilyId) {
+      const family = db.families.find(f => f.id === viewingFamilyId);
+      if (family) {
+        setEditingFamilyStreetAddress(family.streetAddress || '');
+        setEditingFamilyPostalCode(family.postalCode || '');
+        setEditingFamilyCity(family.city || '');
+      }
+    }
+  }, [viewingFamilyId, db.families]);
 
   const personData = useMemo(() => {
     if (!selectedPersonId) return null;
@@ -215,6 +276,331 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
     setDb(prev => ({ ...prev, persons: prev.persons.filter(p => p.id !== id), groupMembers: prev.groupMembers.filter(gm => gm.person_id !== id), assignments: prev.assignments.map(a => a.person_id === id ? { ...a, person_id: null } : a), programItems: prev.programItems.map(p => p.person_id === id ? { ...p, person_id: null } : p) }));
   };
 
+  const handleCreateFamily = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFamilyName.trim()) return;
+
+    try {
+      console.log('Prøver å opprette familie:', newFamilyName.trim());
+      const response = await fetch('/api/families', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newFamilyName.trim(),
+        }),
+      });
+
+      console.log('Response status:', response.status, response.statusText);
+      let newFamily: Family;
+
+      if (!response.ok) {
+        // Hvis API ikke er tilgjengelig, bruk localStorage fallback
+        const errorText = await response.text().catch(() => 'Ukjent feil');
+        console.warn('API-kall feilet (status:', response.status, '), bruker localStorage fallback. Feilmelding:', errorText);
+        
+        // Fallback: Opprett familie lokalt
+        newFamily = {
+          id: crypto.randomUUID(),
+          name: newFamilyName.trim(),
+          created_at: new Date().toISOString()
+        };
+      } else {
+        newFamily = await response.json();
+      }
+      
+      // Oppdater lokal state (fungerer både for API og localStorage)
+      setDb(prev => ({
+        ...prev,
+        families: [...(prev.families || []), newFamily]
+      }));
+
+      setNewFamilyName('');
+      setIsCreateFamilyModalOpen(false);
+      
+      // Åpne modal for å legge til første medlem
+      setNewlyCreatedFamilyId(newFamily.id);
+      setSelectedFamilyForMember(newFamily.id);
+      setIsAddMemberModalOpen(true);
+    } catch (error) {
+      console.error('Feil ved opprettelse av familie:', error);
+      
+      // Fallback: Opprett familie lokalt hvis fetch feiler helt (f.eks. nettverkfeil)
+      const newFamily: Family = {
+        id: crypto.randomUUID(),
+        name: newFamilyName.trim(),
+        created_at: new Date().toISOString()
+      };
+      
+      setDb(prev => ({
+        ...prev,
+        families: [...(prev.families || []), newFamily]
+      }));
+
+      setNewFamilyName('');
+      setIsCreateFamilyModalOpen(false);
+      
+      setNewlyCreatedFamilyId(newFamily.id);
+      setSelectedFamilyForMember(newFamily.id);
+      setIsAddMemberModalOpen(true);
+      
+      alert('Familie opprettet lokalt (API ikke tilgjengelig). Data lagres i nettleseren.');
+    }
+  };
+
+  const handleAddFamilyMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFamilyForMember || (!memberPersonId && !isNewPerson)) return;
+    if (!memberPersonSearch.trim()) return;
+
+    let finalPersonId: UUID | null = memberPersonId;
+
+    // Hvis personen ikke eksisterer, opprett den først
+    if (isNewPerson && !memberPersonId) {
+      try {
+        // Først: Opprett personen i personbasen
+        console.log('Oppretter ny person:', memberPersonSearch.trim());
+        const personResponse = await fetch('/api/people', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: memberPersonSearch.trim(),
+            email: newPersonEmail.trim() || undefined,
+            phone: newPersonPhone.trim() || undefined,
+            birth_year: newPersonBirthYear ? parseInt(newPersonBirthYear) : undefined,
+            birth_date: newPersonBirthDate || undefined,
+            is_admin: false,
+            is_active: true,
+            core_role: CoreRole.MEMBER,
+          }),
+        });
+
+        let newPerson: Person;
+
+        if (!personResponse.ok) {
+          // Fallback: Opprett person lokalt
+          console.warn('API-kall feilet ved opprettelse av person, bruker localStorage fallback');
+          newPerson = {
+            id: crypto.randomUUID(),
+            name: memberPersonSearch.trim(),
+            email: newPersonEmail.trim() || undefined,
+            phone: newPersonPhone.trim() || undefined,
+            birth_year: newPersonBirthYear ? parseInt(newPersonBirthYear) : undefined,
+            birth_date: newPersonBirthDate || undefined,
+            is_admin: false,
+            is_active: true,
+            core_role: CoreRole.MEMBER,
+          };
+        } else {
+          newPerson = await personResponse.json();
+        }
+
+        // Oppdater lokal state med ny person
+        setDb(prev => ({
+          ...prev,
+          persons: [...prev.persons, newPerson]
+        }));
+
+        finalPersonId = newPerson.id;
+        console.log('Ny person opprettet med ID:', finalPersonId);
+      } catch (error) {
+        console.error('Feil ved opprettelse av person:', error);
+        
+        // Fallback: Opprett person lokalt
+        const newPerson: Person = {
+          id: crypto.randomUUID(),
+          name: memberPersonSearch.trim(),
+          email: newPersonEmail.trim() || undefined,
+          phone: newPersonPhone.trim() || undefined,
+          birth_year: newPersonBirthYear ? parseInt(newPersonBirthYear) : undefined,
+          birth_date: newPersonBirthDate || undefined,
+          is_admin: false,
+          is_active: true,
+          core_role: CoreRole.MEMBER,
+        };
+
+        setDb(prev => ({
+          ...prev,
+          persons: [...prev.persons, newPerson]
+        }));
+
+        finalPersonId = newPerson.id;
+      }
+    }
+
+    if (!finalPersonId) {
+      alert('Kunne ikke opprette eller finne person.');
+      return;
+    }
+
+    // Validering: Sjekk om personen allerede er medlem i 2 familier
+    const existingFamilyMemberships = (db.familyMembers || []).filter(fm => fm.person_id === finalPersonId);
+    if (existingFamilyMemberships.length >= 2) {
+      alert('Denne personen er allerede medlem i 2 familier. Maksimalt antall familier per person er 2.');
+      return;
+    }
+
+    // Hvis vi prøver å sette til primæradresse (checkbox ikke huket av), må vi sjekke at personen ikke har en annen primæradresse
+    const isPrimaryResidence = !memberIsSecondaryResidence;
+    if (isPrimaryResidence) {
+      const hasOtherPrimary = existingFamilyMemberships.some(fm => fm.isPrimaryResidence);
+      if (hasOtherPrimary) {
+        alert('Denne personen har allerede en primæradresse i en annen familie. Kun én primæradresse tillatt.');
+        return;
+      }
+    }
+
+    try {
+      // Deretter: Koble personen til familien
+      const response = await fetch('/api/families/' + selectedFamilyForMember + '/members', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          person_id: finalPersonId,
+          role: memberFamilyRole,
+          isPrimaryResidence: !memberIsSecondaryResidence,
+        }),
+      });
+
+      let newMember: FamilyMember;
+
+      if (!response.ok) {
+        // Fallback: Opprett medlem lokalt
+        console.warn('API-kall feilet, bruker localStorage fallback');
+        newMember = {
+          id: crypto.randomUUID(),
+          family_id: selectedFamilyForMember,
+          person_id: finalPersonId,
+          role: memberFamilyRole,
+          isPrimaryResidence: !memberIsSecondaryResidence
+        };
+      } else {
+        newMember = await response.json();
+      }
+      
+      // Oppdater lokal state (fungerer både for API og localStorage)
+      setDb(prev => ({
+        ...prev,
+        familyMembers: [...(prev.familyMembers || []), newMember]
+      }));
+
+      // Reset form
+      setMemberPersonId(null);
+      setMemberPersonSearch('');
+      setMemberFamilyRole(FamilyRole.CHILD);
+      setMemberIsSecondaryResidence(false);
+      setNewlyCreatedFamilyId(null);
+      setIsNewPerson(false);
+      setNewPersonEmail('');
+      setNewPersonPhone('');
+      setNewPersonBirthYear('');
+      setNewPersonBirthDate('');
+      setIsAddMemberModalOpen(false);
+    } catch (error) {
+      console.error('Feil ved legg-til medlem:', error);
+      
+      // Fallback: Opprett medlem lokalt
+      const newMember: FamilyMember = {
+        id: crypto.randomUUID(),
+        family_id: selectedFamilyForMember,
+        person_id: finalPersonId!,
+        role: memberFamilyRole,
+        isPrimaryResidence: !memberIsSecondaryResidence
+      };
+      
+      setDb(prev => ({
+        ...prev,
+        familyMembers: [...(prev.familyMembers || []), newMember]
+      }));
+
+      setMemberPersonId(null);
+      setMemberPersonSearch('');
+      setMemberFamilyRole(FamilyRole.CHILD);
+      setMemberIsSecondaryResidence(false);
+      setNewlyCreatedFamilyId(null);
+      setIsNewPerson(false);
+      setNewPersonEmail('');
+      setNewPersonPhone('');
+      setNewPersonBirthYear('');
+      setNewPersonBirthDate('');
+      setIsAddMemberModalOpen(false);
+      
+      alert('Familiemedlem lagt til lokalt (API ikke tilgjengelig). Data lagres i nettleseren.');
+    }
+  };
+
+  const handleUpdateFamilyAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!viewingFamilyId) return;
+
+    try {
+      const response = await fetch(`/api/families/${viewingFamilyId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          streetAddress: editingFamilyStreetAddress.trim() || undefined,
+          postalCode: editingFamilyPostalCode.trim() || undefined,
+          city: editingFamilyCity.trim() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Kunne ikke oppdatere adresse');
+      }
+
+      const updatedFamily: Family = await response.json();
+      
+      // Oppdater lokal state
+      setDb(prev => ({
+        ...prev,
+        families: prev.families.map(f => f.id === viewingFamilyId ? updatedFamily : f)
+      }));
+
+      setIsEditingFamilyAddress(false);
+    } catch (error) {
+      console.error('Feil ved oppdatering av adresse:', error);
+      
+      // Fallback: Oppdater lokalt
+      setDb(prev => ({
+        ...prev,
+        families: prev.families.map(f => f.id === viewingFamilyId ? {
+          ...f,
+          streetAddress: editingFamilyStreetAddress.trim() || undefined,
+          postalCode: editingFamilyPostalCode.trim() || undefined,
+          city: editingFamilyCity.trim() || undefined,
+        } : f)
+      }));
+
+      setIsEditingFamilyAddress(false);
+    }
+  };
+
+  // Hjelpefunksjon for å beregne alder
+  const calculateAge = (birthYear?: number, birthDate?: string): string => {
+    if (birthDate) {
+      const birth = new Date(birthDate);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      return `${age} år`;
+    }
+    if (birthYear) {
+      const age = new Date().getFullYear() - birthYear;
+      return `${age} år`;
+    }
+    return '';
+  };
+
   const handleUpdateRole = (e: React.FormEvent) => {
     e.preventDefault();
     if (!viewingRoleId) return;
@@ -265,28 +651,36 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
       {/* Precision Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Oversikt</h2>
-          <p className="text-sm text-slate-500">Administrasjon av personell, roller og fellesskap.</p>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Folk</h2>
+          <p className="text-sm text-slate-500">Administrasjon av personer, familier, grupper og roller.</p>
         </div>
-        <div className="inline-flex bg-slate-200/60 p-1 rounded-lg">
-          {([GroupCategory.SERVICE, GroupCategory.FELLOWSHIP, GroupCategory.STRATEGY, 'roles', 'persons'] as const).map(tab => (
+        <div className="inline-flex bg-slate-200/60 p-1 rounded-lg flex-wrap gap-1">
+          {(['persons', 'families', 'fellowship', 'service', 'leadership', 'roles'] as const).map(tab => (
             <button 
               key={tab}
               onClick={() => { setActiveTab(tab); setSelectedPersonId(null); }} 
               className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${activeTab === tab && !selectedPersonId ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
             >
-              {tab === GroupCategory.SERVICE ? 'Teams' : tab === GroupCategory.FELLOWSHIP ? 'Husgrupper' : tab === GroupCategory.STRATEGY ? 'Styre' : tab === 'roles' ? 'Roller' : 'Personer'}
+              {tab === 'persons' ? 'Personer' : tab === 'families' ? 'Familier' : tab === 'fellowship' ? 'Husgrupper' : tab === 'service' ? 'Team' : tab === 'leadership' ? 'Ledelse' : 'Roller'}
             </button>
           ))}
         </div>
       </div>
 
       {selectedPersonId && selectedPerson ? (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4" onClick={() => setSelectedPersonId(null)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-2 duration-300" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setSelectedPersonId(null)} className="p-2 bg-white rounded-lg shadow-sm border border-slate-200 hover:bg-slate-50 transition-all text-slate-600"><ArrowLeft size={18}/></button>
+                <h3 className="text-lg font-bold text-slate-900">Medlemskort: {selectedPerson.name}</h3>
+              </div>
+              <button onClick={() => setSelectedPersonId(null)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+                <X size={20} className="text-slate-600" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
         <div className="animate-in slide-in-from-bottom-2 duration-300 space-y-6">
-           <div className="flex items-center gap-3">
-             <button onClick={() => setSelectedPersonId(null)} className="p-2 bg-white rounded-lg shadow-sm border border-slate-200 hover:bg-slate-50 transition-all text-slate-600"><ArrowLeft size={18}/></button>
-             <h3 className="text-lg font-bold text-slate-900">Medlemskort: {selectedPerson.name}</h3>
-           </div>
 
            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
              {/* Profilpanel */}
@@ -384,6 +778,9 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
                </section>
              </div>
            </div>
+           </div>
+            </div>
+          </div>
         </div>
       ) : activeTab === 'roles' ? (
         <div className="space-y-4">
@@ -459,10 +856,69 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
             </table>
           </div>
         </div>
+      ) : activeTab === 'families' ? (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-800">Familier</h3>
+            {isAdmin && (
+              <button 
+                onClick={() => setIsCreateFamilyModalOpen(true)}
+                className="px-4 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold hover:bg-indigo-700 shadow-sm flex items-center gap-2 transition-all"
+              >
+                <Plus size={14} /> Ny Familie
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(db.families || []).length > 0 ? (db.families || []).map(family => {
+              const members = (db.familyMembers || []).filter(fm => fm.family_id === family.id);
+              const address = family.streetAddress || family.city ? 
+                `${family.streetAddress || ''}${family.streetAddress && family.postalCode ? ', ' : ''}${family.postalCode || ''} ${family.city || ''}`.trim() : 
+                null;
+              return (
+                <div 
+                  key={family.id}
+                  onClick={() => setViewingFamilyId(family.id)}
+                  className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <h3 className="text-sm font-bold text-slate-900 mb-2 group-hover:text-indigo-600">{family.name || 'Familie uten navn'}</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">{members.length} medlemmer</p>
+                  {address && (
+                    <p className="text-xs text-slate-500 mb-3 truncate">{address}</p>
+                  )}
+                  {isAdmin && (
+                    <button 
+                      onClick={(e) => { 
+                        e.stopPropagation();
+                        setSelectedFamilyForMember(family.id); 
+                        setIsAddMemberModalOpen(true); 
+                      }}
+                      className="w-full mt-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-md text-xs font-bold hover:bg-indigo-100 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Plus size={12} /> Legg til medlem
+                    </button>
+                  )}
+                </div>
+              );
+            }) : (
+              <div className="col-span-full bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                <p className="text-slate-500 text-sm text-center py-8">
+                  Ingen familier registrert ennå. Klikk "Ny Familie" for å opprette en familie.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       ) : (
         <div className="space-y-4">
           <div className="flex justify-end">
-            {isAdmin && <button onClick={() => { setNewGroupCategory(activeTab as GroupCategory); setIsCreateModalOpen(true); }} className="px-4 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold shadow-sm hover:bg-indigo-700 transition-all flex items-center gap-2"><Plus size={14} /> Ny Gruppe</button>}
+            {isAdmin && <button onClick={() => { 
+              const category = activeTab === 'service' ? GroupCategory.SERVICE : 
+                              activeTab === 'fellowship' ? GroupCategory.FELLOWSHIP : 
+                              GroupCategory.STRATEGY;
+              setNewGroupCategory(category);
+              setIsCreateModalOpen(true);
+            }} className="px-4 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold shadow-sm hover:bg-indigo-700 transition-all flex items-center gap-2"><Plus size={14} /> Ny Gruppe</button>}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredGroups.map(group => {
@@ -483,6 +939,268 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
                 </button>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Ny Familie Modal */}
+      {isCreateFamilyModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px]">
+          <div className="absolute inset-0" onClick={() => { setIsCreateFamilyModalOpen(false); setNewFamilyName(''); }}></div>
+          <div className="relative bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left">
+            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-indigo-700">
+                <Users size={20} />
+                <h3 className="font-bold">Opprett Ny Familie</h3>
+              </div>
+              <button onClick={() => { setIsCreateFamilyModalOpen(false); setNewFamilyName(''); }} className="p-1 hover:bg-indigo-100 rounded-md transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateFamily} className="p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Familienavn</label>
+                <input
+                  autoFocus
+                  required
+                  type="text"
+                  value={newFamilyName}
+                  onChange={(e) => setNewFamilyName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder="f.eks. Familien Hansen"
+                />
+              </div>
+              <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all">
+                Opprett Familie
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Legg til Familiemedlem Modal */}
+      {isAddMemberModalOpen && selectedFamilyForMember && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px]">
+          <div className="absolute inset-0" onClick={() => {
+            setIsAddMemberModalOpen(false);
+            setSelectedFamilyForMember(null);
+            setMemberPersonId(null);
+            setMemberPersonSearch('');
+            setNewlyCreatedFamilyId(null);
+            setIsNewPerson(false);
+            setNewPersonEmail('');
+            setNewPersonPhone('');
+            setNewPersonBirthYear('');
+            setNewPersonBirthDate('');
+          }}></div>
+          <div className="relative bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left max-h-[90vh]">
+            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-indigo-700">
+                <UserPlus size={20} />
+                <h3 className="font-bold">{newlyCreatedFamilyId ? 'Legg til første medlem' : 'Legg til familiemedlem'}</h3>
+              </div>
+              <button onClick={() => {
+                setIsAddMemberModalOpen(false);
+                setSelectedFamilyForMember(null);
+                setMemberPersonId(null);
+                setMemberPersonSearch('');
+                setNewlyCreatedFamilyId(null);
+                setIsNewPerson(false);
+                setNewPersonEmail('');
+                setNewPersonPhone('');
+                setNewPersonBirthYear('');
+                setNewPersonBirthDate('');
+              }} className="p-1 hover:bg-indigo-100 rounded-md transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleAddFamilyMember} className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Søk eller legg til person</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  <input
+                    type="text"
+                    value={memberPersonSearch}
+                    onChange={(e) => {
+                      const searchValue = e.target.value;
+                      setMemberPersonSearch(searchValue);
+                      
+                      // Sjekk om navnet matcher eksisterende person
+                      const matchingPerson = db.persons.find(p => 
+                        p.name.toLowerCase() === searchValue.toLowerCase().trim()
+                      );
+                      
+                      if (matchingPerson) {
+                        setMemberPersonId(matchingPerson.id);
+                        setIsNewPerson(false);
+                      } else if (searchValue.trim().length > 0) {
+                        setMemberPersonId(null);
+                        setIsNewPerson(true);
+                      } else {
+                        setMemberPersonId(null);
+                        setIsNewPerson(false);
+                      }
+                    }}
+                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                    placeholder="Skriv navn for å søke eller opprett ny..."
+                  />
+                </div>
+                
+                {/* Autocomplete dropdown - vis kun hvis ingen eksakt match */}
+                {memberPersonSearch && !memberPersonId && memberPersonSearch.trim().length >= 2 && (
+                  <div className="mt-2 max-h-40 overflow-y-auto border border-slate-200 rounded-md bg-white shadow-lg">
+                    {db.persons
+                      .filter(p => {
+                        const isAlreadyMember = (db.familyMembers || [])
+                          .some(fm => fm.family_id === selectedFamilyForMember && fm.person_id === p.id);
+                        const matchesSearch = p.name.toLowerCase().includes(memberPersonSearch.toLowerCase());
+                        const exactMatch = p.name.toLowerCase() === memberPersonSearch.toLowerCase().trim();
+                        // Vis ikke eksakt match (den er allerede valgt)
+                        return matchesSearch && !exactMatch && !isAlreadyMember;
+                      })
+                      .map(person => (
+                        <button
+                          key={person.id}
+                          type="button"
+                          onClick={() => {
+                            setMemberPersonId(person.id);
+                            setMemberPersonSearch(person.name);
+                            setIsNewPerson(false);
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-indigo-50 transition-colors border-b border-slate-100 last:border-b-0"
+                        >
+                          <p className="text-sm font-semibold text-slate-800">{person.name}</p>
+                          <p className="text-xs text-slate-500">{person.email}</p>
+                        </button>
+                      ))}
+                    {db.persons.filter(p => {
+                      const isAlreadyMember = (db.familyMembers || [])
+                        .some(fm => fm.family_id === selectedFamilyForMember && fm.person_id === p.id);
+                      const exactMatch = p.name.toLowerCase() === memberPersonSearch.toLowerCase().trim();
+                      return p.name.toLowerCase().includes(memberPersonSearch.toLowerCase()) && !exactMatch && !isAlreadyMember;
+                    }).length === 0 && (
+                      <div className="px-3 py-2 text-xs text-slate-500 italic">
+                        Ingen match funnet. Fortsett å skrive for å opprette ny person.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Valgt eksisterende person */}
+                {memberPersonId && !isNewPerson && (
+                  <div className="mt-2 p-3 bg-indigo-50 rounded-md border border-indigo-200">
+                    <p className="text-xs font-bold text-indigo-700 mb-1">Valgt: {db.persons.find(p => p.id === memberPersonId)?.name}</p>
+                    <p className="text-xs text-indigo-600">{db.persons.find(p => p.id === memberPersonId)?.email}</p>
+                  </div>
+                )}
+
+                {/* Indikasjon for ny person */}
+                {isNewPerson && !memberPersonId && memberPersonSearch.trim().length > 0 && (
+                  <div className="mt-2 p-3 bg-amber-50 rounded-md border border-amber-200">
+                    <p className="text-xs font-bold text-amber-800 mb-2 flex items-center gap-2">
+                      <Plus size={14} />
+                      Ny person vil bli lagt til i katalogen
+                    </p>
+                    <p className="text-[10px] text-amber-700">
+                      Fyll ut informasjon nedenfor for å fullføre registreringen. Alle felter er valgfrie.
+                    </p>
+                  </div>
+                )}
+
+                {/* Ekstra felter for ny person */}
+                {isNewPerson && !memberPersonId && (
+                  <div className="mt-4 space-y-3 pt-4 border-t border-slate-200">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">
+                        E-post (valgfritt)
+                      </label>
+                      <input
+                        type="email"
+                        value={newPersonEmail}
+                        onChange={(e) => setNewPersonEmail(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                        placeholder="person@eksempel.no"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">
+                        Telefon (valgfritt)
+                      </label>
+                      <input
+                        type="tel"
+                        value={newPersonPhone}
+                        onChange={(e) => setNewPersonPhone(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                        placeholder="+47 123 45 678"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">
+                          Fødselsår (valgfritt)
+                        </label>
+                        <input
+                          type="number"
+                          min="1900"
+                          max={new Date().getFullYear()}
+                          value={newPersonBirthYear}
+                          onChange={(e) => setNewPersonBirthYear(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                          placeholder="f.eks. 1990"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">
+                          Fødselsdato (valgfritt)
+                        </label>
+                        <input
+                          type="date"
+                          value={newPersonBirthDate}
+                          onChange={(e) => setNewPersonBirthDate(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Rolle i familien</label>
+                <select
+                  value={memberFamilyRole}
+                  onChange={(e) => setMemberFamilyRole(e.target.value as FamilyRole)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                >
+                  <option value={FamilyRole.PARENT}>Forelder</option>
+                  <option value={FamilyRole.CHILD}>Barn</option>
+                  <option value={FamilyRole.PARTNER}>Ektefelle/Partner</option>
+                  <option value={FamilyRole.GUARDIAN}>Vergemål</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isSecondaryResidence"
+                  checked={memberIsSecondaryResidence}
+                  onChange={(e) => setMemberIsSecondaryResidence(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="isSecondaryResidence" className="text-sm font-medium text-slate-700">
+                  Dette er personens sekundæradresse (delt bosted)
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!memberPersonSearch.trim()}
+                className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
+              >
+                {isNewPerson ? 'Opprett person og legg til i familie' : 'Legg til medlem'}
+              </button>
+            </form>
           </div>
         </div>
       )}
@@ -523,6 +1241,266 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId })
           </div>
         </div>
       )}
+
+      {/* Familievisningsmodal */}
+      {viewingFamilyId && (() => {
+        const viewingFamily = db.families.find(f => f.id === viewingFamilyId);
+        if (!viewingFamily) return null;
+
+        const familyMembers = (db.familyMembers || []).filter(fm => fm.family_id === viewingFamilyId);
+        const parents = familyMembers
+          .filter(fm => fm.role === FamilyRole.PARENT || fm.role === FamilyRole.PARTNER)
+          .map(fm => ({
+            member: fm,
+            person: db.persons.find(p => p.id === fm.person_id)
+          }))
+          .filter(({ person }) => person !== undefined) as Array<{ member: FamilyMember; person: Person }>;
+        
+        const children = familyMembers
+          .filter(fm => fm.role === FamilyRole.CHILD)
+          .map(fm => ({
+            member: fm,
+            person: db.persons.find(p => p.id === fm.person_id)
+          }))
+          .filter(({ person }) => person !== undefined) as Array<{ member: FamilyMember; person: Person }>;
+
+        const familyAddress = viewingFamily.streetAddress || viewingFamily.city ? 
+          `${viewingFamily.streetAddress || ''}${viewingFamily.streetAddress && viewingFamily.postalCode ? ', ' : ''}${viewingFamily.postalCode || ''} ${viewingFamily.city || ''}`.trim() : 
+          null;
+
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setViewingFamilyId(null)}>
+            <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">{viewingFamily.name || 'Familie uten navn'}</h2>
+                  {familyAddress && !isEditingFamilyAddress && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <MapPin size={14} className="text-slate-400" />
+                      <p className="text-sm text-slate-600">{familyAddress}</p>
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => setViewingFamilyId(null)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+                  <X size={20} className="text-slate-600" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Adresse-redigering */}
+                {isEditingFamilyAddress ? (
+                  <form onSubmit={handleUpdateFamilyAddress} className="bg-slate-50 rounded-lg p-4 space-y-3 border border-slate-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <MapPin size={16} /> Familieadresse
+                      </h3>
+                      <button type="button" onClick={() => setIsEditingFamilyAddress(false)} className="text-xs text-slate-500 hover:text-slate-700">
+                        Avbryt
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Gateadresse</label>
+                        <input
+                          type="text"
+                          value={editingFamilyStreetAddress}
+                          onChange={(e) => setEditingFamilyStreetAddress(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                          placeholder="Gate og husnummer"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Postnummer</label>
+                        <input
+                          type="text"
+                          value={editingFamilyPostalCode}
+                          onChange={(e) => setEditingFamilyPostalCode(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                          placeholder="0000"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Poststed</label>
+                        <input
+                          type="text"
+                          value={editingFamilyCity}
+                          onChange={(e) => setEditingFamilyCity(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                          placeholder="By"
+                        />
+                      </div>
+                    </div>
+                    <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                      <Save size={14} /> Lagre adresse
+                    </button>
+                  </form>
+                ) : (
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MapPin size={16} className="text-slate-400" />
+                        <h3 className="text-sm font-bold text-slate-800">Familieadresse</h3>
+                      </div>
+                      {isAdmin && (
+                        <button onClick={() => setIsEditingFamilyAddress(true)} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
+                          <Edit2 size={12} /> Rediger
+                        </button>
+                      )}
+                    </div>
+                    {familyAddress ? (
+                      <p className="text-sm text-slate-600 mt-2">{familyAddress}</p>
+                    ) : (
+                      <p className="text-sm text-slate-400 mt-2 italic">Ingen adresse registrert</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Foreldre/Ektefeller */}
+                {parents.length > 0 && (
+                  <section>
+                    <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                      <Users size={16} className="text-indigo-500" /> Foreldre/Ektefeller
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {parents.map(({ member, person }) => (
+                        <div 
+                          key={member.id}
+                          className="bg-white border border-slate-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2 flex-1">
+                              {member.role === FamilyRole.PARENT ? (
+                                <User size={18} className="text-indigo-500" />
+                              ) : (
+                                <Heart size={18} className="text-rose-500" />
+                              )}
+                              <h4 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (onViewPerson) {
+                                    onViewPerson(person.id);
+                                  } else {
+                                    setSelectedPersonId(person.id);
+                                  }
+                                }}
+                                className="font-bold text-slate-900 group-hover:text-indigo-600 hover:underline cursor-pointer transition-colors"
+                              >
+                                {person.name}
+                              </h4>
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">
+                              {member.role === FamilyRole.PARENT ? 'Forelder' : 'Partner'}
+                            </span>
+                          </div>
+                          {person.phone && (
+                            <div className="flex items-center gap-2 text-xs text-slate-600 mb-1">
+                              <Phone size={12} className="text-slate-400" />
+                              {person.phone}
+                            </div>
+                          )}
+                          {person.email && (
+                            <div className="flex items-center gap-2 text-xs text-slate-600">
+                              <Mail size={12} className="text-slate-400" />
+                              {person.email}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Barn */}
+                {children.length > 0 && (
+                  <section>
+                    <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                      <Baby size={16} className="text-indigo-500" /> Barn
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {children.map(({ member, person }) => {
+                        const age = calculateAge(person.birth_year, person.birth_date);
+                        const hasOtherFamilies = (db.familyMembers || []).filter(
+                          fm => fm.person_id === person.id && fm.family_id !== viewingFamilyId
+                        ).length > 0;
+                        
+                        return (
+                          <div 
+                            key={member.id}
+                            className="bg-white border border-slate-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2 flex-1">
+                                <Baby size={16} className="text-indigo-400" />
+                                <h4 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onViewPerson) {
+                                      onViewPerson(person.id);
+                                    } else {
+                                      setSelectedPersonId(person.id);
+                                    }
+                                  }}
+                                  className="font-bold text-slate-900 group-hover:text-indigo-600 hover:underline cursor-pointer transition-colors"
+                                >
+                                  {person.name}
+                                </h4>
+                              </div>
+                            </div>
+                            {age && (
+                              <p className="text-xs text-slate-500 mb-2">{age}</p>
+                            )}
+                            {hasOtherFamilies && (
+                              <div className="flex items-center gap-1 text-xs text-amber-600 mb-2">
+                                <Home size={12} />
+                                {member.isPrimaryResidence ? 'Hovedadresse' : 'Delt bosted'}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                {/* Tom familie */}
+                {familyMembers.length === 0 && (
+                  <div className="text-center py-8 text-slate-400">
+                    <p className="text-sm mb-2">Ingen medlemmer registrert i denne familien ennå.</p>
+                    {isAdmin && (
+                      <button 
+                        onClick={() => {
+                          setSelectedFamilyForMember(viewingFamilyId);
+                          setIsAddMemberModalOpen(true);
+                        }}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2 mx-auto mt-4"
+                      >
+                        <UserPlus size={14} /> Legg til første medlem
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              {isAdmin && familyMembers.length > 0 && (
+                <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+                  <button 
+                    onClick={() => {
+                      setSelectedFamilyForMember(viewingFamilyId);
+                      setIsAddMemberModalOpen(true);
+                    }}
+                    className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-bold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <UserPlus size={16} /> Legg til medlem
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

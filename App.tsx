@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AppState, Person, GroupCategory, EventOccurrence, ProgramItem, Assignment, UUID, GroupRole, Task, NoticeMessage, CoreRole, ChangeLog } from './types';
+import { AppState, Person, GroupCategory, EventOccurrence, ProgramItem, Assignment, UUID, GroupRole, Task, NoticeMessage, CoreRole, ChangeLog, OccurrenceStatus } from './types';
 import { getDB, saveDB, performBulkCopy } from './db';
 import IdentityPicker from './components/IdentityPicker';
 import Dashboard from './components/Dashboard';
@@ -17,6 +17,7 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<Person | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'calendar' | 'groups' | 'master' | 'wheel' | 'messages'>('dashboard');
   const [initialGroupId, setInitialGroupId] = useState<UUID | null>(null);
+  const [initialPersonId, setInitialPersonId] = useState<UUID | null>(null);
 
   useEffect(() => {
     saveDB(db);
@@ -226,7 +227,7 @@ const App: React.FC = () => {
       id: newId,
       template_id: templateId,
       date,
-      status: 'draft' as any
+      status: OccurrenceStatus.DRAFT
     };
     
     let nextDb = {
@@ -253,7 +254,7 @@ const App: React.FC = () => {
           id: newId,
           template_id: templateId,
           date: dateStr,
-          status: 'draft' as any
+          status: OccurrenceStatus.DRAFT
         };
         
         nextDb.eventOccurrences.push(newOccurrence);
@@ -295,6 +296,11 @@ const App: React.FC = () => {
     setInitialGroupId(groupId);
   };
 
+  const handleViewPerson = (personId: UUID) => {
+    setActiveTab('groups');
+    setInitialPersonId(personId);
+  };
+
   const handleAddMessage = (msg: NoticeMessage) => {
     setDb(prev => ({
       ...prev,
@@ -331,13 +337,13 @@ const App: React.FC = () => {
         <div className="flex-1 px-4 space-y-1 py-2">
           <NavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<ClipboardList size={18}/>} label="Min Vaktliste" />
           <NavItem active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} icon={<Calendar size={18}/>} label="Kalender" />
-          <NavItem active={activeTab === 'groups'} onClick={() => setActiveTab('groups')} icon={<Users size={18}/>} label="Teams & Grupper" />
+          <NavItem active={activeTab === 'groups'} onClick={() => setActiveTab('groups')} icon={<Users size={18}/>} label="Folk" />
           {canSeeMessages && (
             <NavItem active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<Bell size={18}/>} label="Oppslag & Dialog" />
           )}
           <NavItem active={activeTab === 'wheel'} onClick={() => setActiveTab('wheel')} icon={<Target size={18}/>} label="Årshjul" />
           {currentUser.is_admin && (
-            <NavItem active={activeTab === 'master'} onClick={() => setActiveTab('master'} icon={<Settings size={18}/>} label="Master-oppsett" />
+            <NavItem active={activeTab === 'master'} onClick={() => setActiveTab('master')} icon={<Settings size={18}/>} label="Master-oppsett" />
           )}
         </div>
 
@@ -374,7 +380,7 @@ const App: React.FC = () => {
             onDeleteProgramItem={handleDeleteProgramItem}
           />
         )}
-        {activeTab === 'groups' && <GroupsView db={db} setDb={setDb} isAdmin={currentUser.is_admin} initialViewGroupId={initialGroupId} />}
+        {activeTab === 'groups' && <GroupsView db={db} setDb={setDb} isAdmin={currentUser.is_admin} initialViewGroupId={initialGroupId} initialPersonId={initialPersonId} onViewPerson={handleViewPerson} />}
         {activeTab === 'wheel' && <YearlyWheelView db={db} isAdmin={currentUser.is_admin} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} />}
         {activeTab === 'messages' && canSeeMessages && (
           <CommunicationView db={db} currentUser={currentUser} onAddMessage={handleAddMessage} onDeleteMessage={handleDeleteMessage} />
@@ -394,7 +400,7 @@ const App: React.FC = () => {
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2 px-1 z-50 shadow-2xl">
         <MobileNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<ClipboardList size={18}/>} label="Vakter" />
         <MobileNavItem active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} icon={<Calendar size={18}/>} label="Kalender" />
-        <MobileNavItem active={activeTab === 'groups'} onClick={() => setActiveTab('groups')} icon={<Users size={18}/>} label="Grupper" />
+        <MobileNavItem active={activeTab === 'groups'} onClick={() => setActiveTab('groups')} icon={<Users size={18}/>} label="Folk" />
         {canSeeMessages && (
           <MobileNavItem active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<Bell size={18}/>} label="Melding" />
         )}

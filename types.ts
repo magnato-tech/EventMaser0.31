@@ -7,6 +7,13 @@ export enum GroupCategory {
   STRATEGY = 'strategy'
 }
 
+export enum FamilyRole {
+  PARENT = 'parent',
+  CHILD = 'child',
+  PARTNER = 'partner',
+  GUARDIAN = 'guardian'
+}
+
 export enum GroupRole {
   LEADER = 'leader',
   MEMBER = 'member'
@@ -35,9 +42,14 @@ export interface GatheringPattern {
 export interface Person {
   id: UUID;
   name: string;
-  email: string;
+  email?: string;
   phone?: string;
   social_security_number?: string;
+  birth_year?: number;
+  birth_date?: string;
+  streetAddress?: string;
+  postalCode?: string;
+  city?: string;
   is_admin: boolean;
   is_active: boolean;
   core_role: CoreRole;
@@ -142,6 +154,23 @@ export interface NoticeMessage {
   occurrence_id?: UUID;
 }
 
+export interface Family {
+  id: UUID;
+  name?: string; // Valgfritt familiensavn
+  streetAddress?: string;
+  postalCode?: string;
+  city?: string;
+  created_at: string;
+}
+
+export interface FamilyMember {
+  id: UUID;
+  family_id: UUID;
+  person_id: UUID;
+  role: FamilyRole;
+  isPrimaryResidence: boolean; // Kun én per person kan være true
+}
+
 export interface AppState {
   persons: Person[];
   groups: Group[];
@@ -154,5 +183,7 @@ export interface AppState {
   programItems: ProgramItem[];
   tasks: Task[];
   noticeMessages: NoticeMessage[];
-  changeLogs: ChangeLog[]; // Ny
+  changeLogs: ChangeLog[];
+  families: Family[]; // Ny
+  familyMembers: FamilyMember[]; // Ny
 }

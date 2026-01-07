@@ -231,5 +231,7 @@ export const INITIAL_DATA: AppState = {
       created_at: new Date(Date.now() - 86400000).toISOString()
     }
   ],
-  changeLogs: []
+  changeLogs: [],
+  families: [],
+  familyMembers: []
 };
