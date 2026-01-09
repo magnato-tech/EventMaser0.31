@@ -4,7 +4,8 @@ export type UUID = string;
 export enum GroupCategory {
   SERVICE = 'service',
   FELLOWSHIP = 'fellowship',
-  STRATEGY = 'strategy'
+  STRATEGY = 'strategy',
+  BARNKIRKE = 'barnekirke'
 }
 
 export enum FamilyRole {
@@ -16,6 +17,7 @@ export enum FamilyRole {
 
 export enum GroupRole {
   LEADER = 'leader',
+  DEPUTY_LEADER = 'deputy_leader',
   MEMBER = 'member'
 }
 
@@ -100,7 +102,10 @@ export interface EventOccurrence {
   id: UUID;
   template_id: UUID | null;
   date: string;
+  time?: string; // Format: "HH:mm" (e.g., "10:00")
   title_override?: string;
+  theme?: string; // Tema for dagen i tekstformat
+  bible_verse?: string; // Dagens bibbelord
   status: OccurrenceStatus;
   last_synced_at?: string;
 }
@@ -124,6 +129,7 @@ export interface ProgramItem {
   group_id?: UUID | null;
   person_id?: UUID | null;
   order: number;
+  description?: string; // Tekstbeskrivelse/tema for programposten
 }
 
 export interface Task {

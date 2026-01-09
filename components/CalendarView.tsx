@@ -1,7 +1,23 @@
 
-import React, { useState, useMemo } from 'react';
-import { AppState, EventOccurrence, ServiceRole, UUID, ProgramItem, GroupCategory, Person, CoreRole } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { AppState, EventOccurrence, ServiceRole, UUID, ProgramItem, GroupCategory, Person, CoreRole, GroupRole } from '../types';
 import { ChevronLeft, ChevronRight, Plus, UserPlus, X, Trash2, ListChecks, Info, CheckCircle2, Calendar as CalendarIcon, Repeat, LayoutGrid, List as ListIcon, Clock, Users, User, Shield, AlertTriangle, RefreshCw, UserCheck, Sparkles, ArrowRight, Library, GripVertical, Edit2, History } from 'lucide-react';
+
+// Hjelpefunksjon for å parse datoer i lokal tid (Berlin time)
+const parseLocalDate = (dateString: string): Date => {
+  // dateString er i format "YYYY-MM-DD"
+  const [year, month, day] = dateString.split('-').map(Number);
+  // Opprett dato i lokal tid (Berlin time)
+  return new Date(year, month - 1, day);
+};
+
+// Hjelpefunksjon for å formatere dato til YYYY-MM-DD i lokal tid
+const formatLocalDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 interface Props {
   db: AppState;
@@ -9,7 +25,9 @@ interface Props {
   onUpdateAssignment: (id: string, personId: string | null) => void;
   onAddAssignment: (occurrenceId: string, roleId: string) => void;
   onSyncStaffing: (occurrenceId: string) => void;
-  onCreateOccurrence: (templateId: string, date: string) => void;
+  onCreateOccurrence: (templateId: string, date: string, time?: string) => void;
+  onUpdateOccurrence: (occurrenceId: string, updates: Partial<EventOccurrence>) => void;
+  onDeleteOccurrence: (occurrenceId: string) => void;
   onCreateRecurring: (templateId: string, startDate: string, count: number, intervalDays: number) => void;
   onAddProgramItem: (item: ProgramItem) => void;
   onUpdateProgramItem: (id: string, updates: Partial<ProgramItem>) => void;
@@ -18,7 +36,7 @@ interface Props {
 }
 
 const CalendarView: React.FC<Props> = ({ 
-  db, isAdmin, onUpdateAssignment, onAddAssignment, onSyncStaffing, onCreateOccurrence, onCreateRecurring, 
+  db, isAdmin, onUpdateAssignment, onAddAssignment, onSyncStaffing, onCreateOccurrence, onUpdateOccurrence, onDeleteOccurrence, onCreateRecurring, 
   onAddProgramItem, onUpdateProgramItem, onReorderProgramItems, onDeleteProgramItem 
 }) => {
   const [selectedOccId, setSelectedOccId] = useState<string | null>(null);
@@ -31,21 +49,45 @@ const CalendarView: React.FC<Props> = ({
   const [editingProgramItem, setEditingProgramItem] = useState<ProgramItem | null>(null);
   const [isAddRoleModalOpen, setIsAddRoleModalOpen] = useState(false);
   const [roleInstructionsId, setRoleInstructionsId] = useState<string | null>(null);
+  const [isCreateOccurrenceModalOpen, setIsCreateOccurrenceModalOpen] = useState(false);
+  const [isEditOccurrenceModalOpen, setIsEditOccurrenceModalOpen] = useState(false);
+  const [selectedDateForCreate, setSelectedDateForCreate] = useState<string>('');
   
   // Form States
   const [progTitle, setProgTitle] = useState('');
   const [progDuration, setProgDuration] = useState(5);
   const [progRoleId, setProgRoleId] = useState<string>('');
   const [progGroupId, setProgGroupId] = useState<string>('');
+  const [progPersonId, setProgPersonId] = useState<string>('');
+  const [progDescription, setProgDescription] = useState<string>('');
+  const [newOccurrenceTemplateId, setNewOccurrenceTemplateId] = useState<string>('');
+  const [newOccurrenceDate, setNewOccurrenceDate] = useState<string>('');
+  const [newOccurrenceTime, setNewOccurrenceTime] = useState<string>('');
+  const [editOccurrenceDate, setEditOccurrenceDate] = useState<string>('');
+  const [editOccurrenceTime, setEditOccurrenceTime] = useState<string>('');
+  const [editOccurrenceTheme, setEditOccurrenceTheme] = useState<string>('');
+  const [editOccurrenceBibleVerse, setEditOccurrenceBibleVerse] = useState<string>('');
   
   // Drag and Drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  const occurrences = [...db.eventOccurrences].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const occurrences = [...db.eventOccurrences].sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
   const selectedOcc = db.eventOccurrences.find(o => o.id === selectedOccId);
 
-  const getTemplateTitle = (tid: string) => db.eventTemplates.find(t => t.id === tid)?.title || 'Ukjent';
+  const getTemplateTitle = (tid: string | null) => {
+    if (!tid) return 'Ukjent';
+    return db.eventTemplates.find(t => t.id === tid)?.title || 'Ukjent';
+  };
+
+  // Initialize edit fields when selectedOcc changes
+  useEffect(() => {
+    if (selectedOcc) {
+      setEditOccurrenceDate(selectedOcc.date);
+      setEditOccurrenceTime(selectedOcc.time || '');
+      setEditOccurrenceTheme(selectedOcc.theme || '');
+    }
+  }, [selectedOccId]);
 
   const calendarDays = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -73,7 +115,7 @@ const CalendarView: React.FC<Props> = ({
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
 
   const getOccurrencesForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatLocalDate(date);
     return db.eventOccurrences.filter(o => o.date === dateStr);
   };
 
@@ -83,6 +125,8 @@ const CalendarView: React.FC<Props> = ({
     setProgDuration(5);
     setProgRoleId('');
     setProgGroupId('');
+    setProgPersonId('');
+    setProgDescription('');
     setIsProgramModalOpen(true);
   };
 
@@ -92,6 +136,8 @@ const CalendarView: React.FC<Props> = ({
     setProgDuration(item.duration_minutes);
     setProgRoleId(item.service_role_id || '');
     setProgGroupId(item.group_id || '');
+    setProgPersonId(item.person_id || '');
+    setProgDescription(item.description || '');
     setIsProgramModalOpen(true);
   };
 
@@ -104,7 +150,9 @@ const CalendarView: React.FC<Props> = ({
         title: progTitle,
         duration_minutes: progDuration,
         service_role_id: progRoleId || null,
-        group_id: progGroupId || null
+        group_id: progGroupId || null,
+        person_id: progPersonId || null,
+        description: progDescription.trim() || undefined
       });
     } else {
       const items = db.programItems.filter(p => p.occurrence_id === selectedOcc.id);
@@ -116,12 +164,20 @@ const CalendarView: React.FC<Props> = ({
         duration_minutes: progDuration,
         service_role_id: progRoleId || null,
         group_id: progGroupId || null,
-        order: items.length
+        person_id: progPersonId || null,
+        order: items.length,
+        description: progDescription.trim() || undefined
       };
       onAddProgramItem(newItem);
     }
     
+    // Reset alle felter
     setProgTitle('');
+    setProgDuration(5);
+    setProgRoleId('');
+    setProgGroupId('');
+    setProgPersonId('');
+    setProgDescription('');
     setIsProgramModalOpen(false);
     setEditingProgramItem(null);
   };
@@ -214,17 +270,58 @@ const CalendarView: React.FC<Props> = ({
       </div>
 
       {viewMode === 'list' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-left">
-          {occurrences.map(occ => (
-            <button key={occ.id} onClick={() => { setSelectedOccId(occ.id); setActiveTab('program'); }} className={`text-left p-4 rounded-xl border transition-all ${selectedOccId === occ.id ? 'bg-white border-indigo-600 shadow-sm' : 'bg-white border-slate-100 hover:border-indigo-200'}`}>
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{new Intl.DateTimeFormat('no-NO', { weekday: 'short' }).format(new Date(occ.date))}</span>
-                <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-bold ${occ.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>{occ.status}</span>
-              </div>
-              <h3 className="text-base font-bold text-slate-800 mb-0.5">{occ.title_override || getTemplateTitle(occ.template_id)}</h3>
-              <p className="text-slate-500 text-xs">{new Intl.DateTimeFormat('no-NO', { day: 'numeric', month: 'short' }).format(new Date(occ.date))}</p>
+        <div className="space-y-4">
+          {isAdmin && (
+            <button 
+              onClick={() => {
+                setNewOccurrenceDate(new Date().toISOString().split('T')[0]);
+                setNewOccurrenceTime('');
+                setNewOccurrenceTemplateId(db.eventTemplates[0]?.id || '');
+                setIsCreateOccurrenceModalOpen(true);
+              }}
+              className="w-full p-4 rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 hover:bg-indigo-100 hover:border-indigo-400 transition-all flex items-center justify-center gap-2 text-indigo-700 font-bold"
+            >
+              <Plus size={18} />
+              Ny Arrangement
             </button>
-          ))}
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-left">
+            {occurrences.map(occ => (
+              <div key={occ.id} className={`relative text-left p-4 rounded-xl border transition-all group ${selectedOccId === occ.id ? 'bg-white border-indigo-600 shadow-sm' : 'bg-white border-slate-100 hover:border-indigo-200'}`}>
+                <button 
+                  onClick={() => { setSelectedOccId(occ.id); setActiveTab('program'); }} 
+                  className="w-full text-left"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{new Intl.DateTimeFormat('no-NO', { weekday: 'short' }).format(parseLocalDate(occ.date))}</span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-bold ${occ.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>{occ.status}</span>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-800 mb-0.5">{occ.title_override || getTemplateTitle(occ.template_id)}</h3>
+                  {occ.theme && (
+                    <p className="text-xs text-slate-600 italic mb-1">{occ.theme}</p>
+                  )}
+                  <p className="text-slate-500 text-xs">
+                    {new Intl.DateTimeFormat('no-NO', { day: 'numeric', month: 'short' }).format(parseLocalDate(occ.date))}
+                    {occ.time && <span className="ml-2 font-semibold">{occ.time}</span>}
+                  </p>
+                </button>
+                {isAdmin && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onDeleteOccurrence(occ.id);
+                    }}
+                    className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg transition-all z-10 cursor-pointer"
+                    title="Slett arrangement"
+                    type="button"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -240,15 +337,57 @@ const CalendarView: React.FC<Props> = ({
             {['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'].map(day => (<div key={day} className="py-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-r last:border-r-0">{day}</div>))}
             {calendarDays.map((day, i) => {
               const occs = getOccurrencesForDate(day.date);
-              const isToday = new Date().toISOString().split('T')[0] === day.date.toISOString().split('T')[0];
+              const isToday = formatLocalDate(new Date()) === formatLocalDate(day.date);
               return (
                 <div key={i} className={`min-h-[100px] p-1.5 border-b border-r last:border-r-0 group transition-colors ${day.isCurrentMonth ? 'bg-white' : 'bg-slate-50/50 text-slate-300'}`}>
                   <div className="flex justify-between items-center mb-1">
                     <span className={`text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full ${isToday ? 'bg-indigo-600 text-white' : ''}`}>{day.date.getDate()}</span>
-                    {isAdmin && day.isCurrentMonth && <button onClick={() => onCreateOccurrence(db.eventTemplates[0]?.id, day.date.toISOString().split('T')[0])} className="opacity-0 group-hover:opacity-100 p-0.5 text-indigo-400 hover:text-indigo-600"><Plus size={12} /></button>}
+                    {isAdmin && day.isCurrentMonth && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const dateStr = formatLocalDate(day.date);
+                          setSelectedDateForCreate(dateStr);
+                          setNewOccurrenceDate(dateStr);
+                          setNewOccurrenceTime('');
+                          setNewOccurrenceTemplateId(db.eventTemplates[0]?.id || '');
+                          setIsCreateOccurrenceModalOpen(true);
+                        }} 
+                        className="opacity-0 group-hover:opacity-100 p-0.5 text-indigo-400 hover:text-indigo-600"
+                      >
+                        <Plus size={12} />
+                      </button>
+                    )}
                   </div>
                   <div className="space-y-1">
-                    {occs.map(occ => (<button key={occ.id} onClick={() => { setSelectedOccId(occ.id); setActiveTab('program'); }} className={`w-full text-left px-1.5 py-0.5 rounded text-[9px] font-bold border truncate transition-all ${selectedOccId === occ.id ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100'}`}>{occ.title_override || getTemplateTitle(occ.template_id)}</button>))}
+                    {occs.map(occ => (
+                      <div 
+                        key={occ.id} 
+                        className="relative group/occ"
+                      >
+                        <button 
+                          onClick={() => { setSelectedOccId(occ.id); setActiveTab('program'); }} 
+                          className={`w-full text-left px-1.5 py-0.5 rounded text-[9px] font-bold border truncate transition-all ${selectedOccId === occ.id ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100'}`}
+                        >
+                          {occ.title_override || getTemplateTitle(occ.template_id)}
+                          {occ.time && <span className="ml-1 opacity-75">{occ.time}</span>}
+                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onDeleteOccurrence(occ.id);
+                            }}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 opacity-0 group-hover/occ:opacity-100 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded transition-all z-10 cursor-pointer"
+                            title="Slett arrangement"
+                            type="button"
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
@@ -258,18 +397,82 @@ const CalendarView: React.FC<Props> = ({
       )}
 
       {selectedOcc && (
-        <div className="fixed top-0 bottom-0 right-0 left-0 md:left-64 z-[60] bg-white flex flex-col animate-in slide-in-from-right duration-300 border-l shadow-2xl">
+        <div className="fixed inset-0 md:inset-y-0 md:left-64 md:right-0 z-[60] bg-white flex flex-col animate-in slide-in-from-right duration-300 border-l shadow-2xl">
           <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
-            <div className="text-left">
-              <div className="flex items-center gap-2 mb-0.5">
+            <div className="text-left flex-1">
+              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                 <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-bold uppercase rounded">Planlegging</span>
-                <p className="text-xs text-slate-500">{new Intl.DateTimeFormat('no-NO', { dateStyle: 'long' }).format(new Date(selectedOcc.date))}</p>
+                {isAdmin ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={editOccurrenceDate || selectedOcc.date}
+                      onChange={(e) => {
+                        setEditOccurrenceDate(e.target.value);
+                        onUpdateOccurrence(selectedOcc.id, { date: e.target.value });
+                      }}
+                      className="text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none"
+                    />
+                    <input
+                      type="time"
+                      value={editOccurrenceTime !== undefined ? editOccurrenceTime : (selectedOcc.time || '')}
+                      onChange={(e) => {
+                        setEditOccurrenceTime(e.target.value);
+                        onUpdateOccurrence(selectedOcc.id, { time: e.target.value || undefined });
+                      }}
+                      className="text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    {new Intl.DateTimeFormat('no-NO', { dateStyle: 'long' }).format(parseLocalDate(selectedOcc.date))}
+                    {selectedOcc.time && <span className="ml-2 font-semibold">{selectedOcc.time}</span>}
+                  </p>
+                )}
               </div>
               <h3 className="text-xl font-bold text-slate-900">{selectedOcc.title_override || getTemplateTitle(selectedOcc.template_id)}</h3>
+              {/* Tema-felt (synlig og redigerbart for admin) */}
+              {isAdmin ? (
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    value={editOccurrenceTheme !== undefined ? editOccurrenceTheme : (selectedOcc.theme || '')}
+                    onChange={(e) => {
+                      setEditOccurrenceTheme(e.target.value);
+                      onUpdateOccurrence(selectedOcc.id, { theme: e.target.value.trim() || undefined });
+                    }}
+                    placeholder="Tema for dagen..."
+                    className="text-sm text-slate-600 italic w-full px-3 py-1.5 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  />
+                </div>
+              ) : selectedOcc.theme ? (
+                <p className="text-sm text-slate-600 italic mt-2">{selectedOcc.theme}</p>
+              ) : null}
             </div>
-            <button onClick={() => setSelectedOccId(null)} className="p-2 bg-slate-200 hover:bg-slate-300 rounded-xl transition-all group">
-              <X size={20} className="text-slate-600" />
-            </button>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDeleteOccurrence(selectedOcc.id);
+                    setSelectedOccId(null);
+                  }}
+                  className="p-2 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl transition-all group cursor-pointer"
+                  title="Slett arrangement"
+                  type="button"
+                >
+                  <Trash2 size={18} />
+                </button>
+              )}
+              <button onClick={() => {
+                setEditOccurrenceDate('');
+                setEditOccurrenceTime('');
+                setSelectedOccId(null);
+              }} className="p-2 bg-slate-200 hover:bg-slate-300 rounded-xl transition-all group">
+                <X size={20} className="text-slate-600" />
+              </button>
+            </div>
           </div>
           
           <div className="flex bg-slate-50 border-b shrink-0 px-6">
@@ -316,10 +519,12 @@ const CalendarView: React.FC<Props> = ({
                             </div>
                           )}
                           <div className="flex items-center gap-4 flex-1">
-                            <div className="flex flex-col items-center shrink-0 w-14 text-center border-r pr-4">
-                              <span className="text-xs font-bold text-indigo-600 leading-none mb-1">{item.formattedTime}</span>
-                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{item.duration_minutes}m</span>
-                            </div>
+                            {item.duration_minutes > 0 && (
+                              <div className="flex flex-col items-center shrink-0 w-14 text-center border-r pr-4">
+                                <span className="text-xs font-bold text-indigo-600 leading-none mb-1">{item.formattedTime}</span>
+                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{item.duration_minutes}m</span>
+                              </div>
+                            )}
                             <div className="flex-1 min-w-0">
                               <div className="flex justify-between items-center">
                                 <h5 className="font-bold text-slate-800 text-sm truncate mr-2">{item.title}</h5>
@@ -334,6 +539,9 @@ const CalendarView: React.FC<Props> = ({
                                   </div>
                                 )}
                               </div>
+                              {item.description && item.description.trim() && (
+                                <p className="text-xs text-slate-600 mt-1 mb-1.5 italic">{item.description}</p>
+                              )}
                               <div className="flex items-center gap-3 mt-1">
                                 {role && <span className="text-[9px] text-indigo-600 font-bold uppercase tracking-wider bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 flex items-center gap-1"><Library size={10}/> {role.name}</span>}
                                 {group && <span className="text-[9px] text-teal-600 font-bold uppercase tracking-wider bg-teal-50 px-1.5 py-0.5 rounded border border-teal-100 flex items-center gap-1"><Users size={10}/> {group.name}</span>}
@@ -543,7 +751,17 @@ const CalendarView: React.FC<Props> = ({
           <div className="relative bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden text-left animate-in zoom-in-95">
             <div className="p-4 bg-indigo-700 text-white flex justify-between items-center">
               <h3 className="text-sm font-bold">{editingProgramItem ? 'Rediger Aktivitet' : 'Ny Aktivitet'}</h3>
-              <button onClick={() => { setIsProgramModalOpen(false); setEditingProgramItem(null); }}><X size={18} /></button>
+              <button onClick={() => { 
+                setIsProgramModalOpen(false); 
+                setEditingProgramItem(null);
+                // Reset alle felter
+                setProgTitle('');
+                setProgDuration(5);
+                setProgRoleId('');
+                setProgGroupId('');
+                setProgPersonId('');
+                setProgDescription('');
+              }}><X size={18} /></button>
             </div>
             <form onSubmit={handleSaveProgramItem} className="p-5 space-y-4">
               <div>
@@ -563,9 +781,9 @@ const CalendarView: React.FC<Props> = ({
                 <input 
                   required 
                   type="number" 
-                  min="1" 
+                  min="0" 
                   value={progDuration} 
-                  onChange={e => setProgDuration(parseInt(e.target.value) || 5)} 
+                  onChange={e => setProgDuration(parseInt(e.target.value) || 0)} 
                   className="w-full px-3 py-2 border rounded-lg text-sm" 
                 />
               </div>
@@ -585,7 +803,19 @@ const CalendarView: React.FC<Props> = ({
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Team (Gruppe)</label>
                   <select 
                     value={progGroupId} 
-                    onChange={e => setProgGroupId(e.target.value)} 
+                    onChange={e => {
+                      const groupId = e.target.value;
+                      setProgGroupId(groupId);
+                      // Auto-utfyll gruppeleder hvis team velges
+                      if (groupId) {
+                        const leaderMember = db.groupMembers.find(
+                          gm => gm.group_id === groupId && gm.role === GroupRole.LEADER
+                        );
+                        if (leaderMember) {
+                          setProgPersonId(leaderMember.person_id);
+                        }
+                      }
+                    }}
                     className="w-full px-2 py-2 border rounded-lg text-[11px] font-medium"
                   >
                     <option value="">Ingen valgt</option>
@@ -593,9 +823,113 @@ const CalendarView: React.FC<Props> = ({
                   </select>
                 </div>
               </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Ansvarlig person</label>
+                <select 
+                  value={progPersonId} 
+                  onChange={e => setProgPersonId(e.target.value)} 
+                  className="w-full px-2 py-2 border rounded-lg text-[11px] font-medium"
+                >
+                  <option value="">Ingen valgt</option>
+                  {db.persons.filter(p => p.is_active).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tekstboks</label>
+                <textarea 
+                  value={progDescription} 
+                  onChange={e => setProgDescription(e.target.value)} 
+                  className="w-full px-3 py-2 border rounded-lg text-sm resize-none" 
+                  placeholder="Skriv inn tekst..."
+                  rows={3}
+                />
+              </div>
               <button type="submit" className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-md hover:bg-indigo-700 transition-all">
                 {editingProgramItem ? 'Oppdater' : 'Lagre'}
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Occurrence Modal */}
+      {isCreateOccurrenceModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
+          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden text-left animate-in zoom-in-95">
+            <div className="p-4 bg-indigo-700 text-white flex justify-between items-center">
+              <h3 className="text-sm font-bold uppercase tracking-tight">Ny Arrangement</h3>
+              <button onClick={() => {
+                setIsCreateOccurrenceModalOpen(false);
+                setNewOccurrenceDate('');
+                setNewOccurrenceTime('');
+                setNewOccurrenceTemplateId('');
+              }}>
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (newOccurrenceTemplateId && newOccurrenceDate) {
+                onCreateOccurrence(newOccurrenceTemplateId, newOccurrenceDate, newOccurrenceTime || undefined);
+                setIsCreateOccurrenceModalOpen(false);
+                setNewOccurrenceDate('');
+                setNewOccurrenceTime('');
+                setNewOccurrenceTemplateId('');
+              }
+            }} className="p-5 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Mal</label>
+                <select
+                  required
+                  value={newOccurrenceTemplateId}
+                  onChange={(e) => setNewOccurrenceTemplateId(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                >
+                  <option value="">Velg mal...</option>
+                  {db.eventTemplates.map(template => (
+                    <option key={template.id} value={template.id}>{template.title}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Dato</label>
+                <input
+                  required
+                  type="date"
+                  value={newOccurrenceDate}
+                  onChange={(e) => setNewOccurrenceDate(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tidspunkt (valgfritt)</label>
+                <input
+                  type="time"
+                  value={newOccurrenceTime}
+                  onChange={(e) => setNewOccurrenceTime(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateOccurrenceModalOpen(false);
+                    setNewOccurrenceDate('');
+                    setNewOccurrenceTime('');
+                    setNewOccurrenceTemplateId('');
+                  }}
+                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
+                >
+                  Avbryt
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-all"
+                >
+                  Opprett
+                </button>
+              </div>
             </form>
           </div>
         </div>

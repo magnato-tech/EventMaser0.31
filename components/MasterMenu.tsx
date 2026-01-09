@@ -1,18 +1,33 @@
 
 import React, { useState, useMemo } from 'react';
-import { AppState, EventTemplate, ServiceRole, GroupCategory, UUID, ProgramItem, Assignment, Person, GroupRole, ChangeLog, CoreRole } from '../types';
-import { Settings, Plus, Info, Edit3, Trash2, Shield, Repeat, X, Clock, Users, Edit2, Library, ListChecks, Lock, UserCheck, UserPlus, GripVertical, RefreshCw, AlertCircle, Save } from 'lucide-react';
+import { AppState, EventTemplate, EventOccurrence, ServiceRole, GroupCategory, UUID, ProgramItem, Assignment, Person, GroupRole, ChangeLog, CoreRole } from '../types';
+import { Settings, Plus, Info, Edit3, Trash2, Shield, Repeat, X, Clock, Users, Edit2, Library, ListChecks, Lock, UserCheck, UserPlus, GripVertical, RefreshCw, AlertCircle, Save, Calendar } from 'lucide-react';
+
+// Hjelpefunksjon for å parse datoer i lokal tid (Berlin time)
+const parseLocalDate = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+// Hjelpefunksjon for å formatere dato til YYYY-MM-DD i lokal tid
+const formatLocalDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 interface Props {
   db: AppState;
   setDb: React.Dispatch<React.SetStateAction<AppState>>;
   onCreateRecurring: (templateId: string, startDate: string, count: number, intervalDays: number) => void;
+  onUpdateOccurrence: (occurrenceId: string, updates: Partial<EventOccurrence>) => void;
   onAddProgramItem: (item: ProgramItem) => void;
   onUpdateProgramItem?: (id: string, updates: Partial<ProgramItem>) => void;
   onDeleteProgramItem: (id: string) => void;
 }
 
-const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgramItem, onUpdateProgramItem, onDeleteProgramItem }) => {
+const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onUpdateOccurrence, onAddProgramItem, onUpdateProgramItem, onDeleteProgramItem }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<EventTemplate | null>(db.eventTemplates[0] || null);
   
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -27,14 +42,18 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
   const [newTemplateRecurrence, setNewTemplateRecurrence] = useState('Hver søndag');
 
   const [recStartDate, setRecStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [recCount, setRecCount] = useState(4);
-  const [recInterval, setRecInterval] = useState(7);
+  const [recStartTime, setRecStartTime] = useState<string>('');
+  const [recEndDate, setRecEndDate] = useState<string>('');
+  const [recFrequency, setRecFrequency] = useState<'weekly' | 'biweekly' | 'triweekly' | 'monthly'>('weekly');
+  const [recWeekInterval, setRecWeekInterval] = useState<number>(1); // For uke-basert: 1, 2, 3, eller 4
+  const [recMonthWeek, setRecMonthWeek] = useState<number>(1); // For månedlig: 1., 2., 3., eller 4. uke
 
   const [progTitle, setProgTitle] = useState('');
   const [progDuration, setProgDuration] = useState(5);
   const [progRoleId, setProgRoleId] = useState<string>('');
   const [progGroupId, setProgGroupId] = useState<string>('');
   const [progPersonId, setProgPersonId] = useState<string>('');
+  const [progDescription, setProgDescription] = useState<string>('');
 
   // Drag and Drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -219,6 +238,7 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
     setProgRoleId('');
     setProgGroupId('');
     setProgPersonId('');
+    setProgDescription('');
     setIsProgramModalOpen(true);
   };
 
@@ -229,6 +249,7 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
     setProgRoleId(item.service_role_id || '');
     setProgGroupId(item.group_id || '');
     setProgPersonId(item.person_id || '');
+    setProgDescription(item.description || '');
     setIsProgramModalOpen(true);
   };
 
@@ -243,7 +264,8 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
           duration_minutes: progDuration,
           service_role_id: progRoleId || null,
           group_id: progGroupId || null,
-          person_id: progPersonId || null
+          person_id: progPersonId || null,
+          description: progDescription.trim() || undefined
         });
       } else {
         setDb(prev => ({
@@ -254,7 +276,8 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
             duration_minutes: progDuration,
             service_role_id: progRoleId || null,
             group_id: progGroupId || null,
-            person_id: progPersonId || null
+            person_id: progPersonId || null,
+            description: progDescription.trim() || undefined
           } : p)
         }));
       }
@@ -268,12 +291,19 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
         service_role_id: progRoleId || null,
         group_id: progGroupId || null,
         person_id: progPersonId || null,
-        order: items.length
+        order: items.length,
+        description: progDescription.trim() || undefined
       };
       onAddProgramItem(newItem);
     }
 
+    // Reset alle felter
     setProgTitle('');
+    setProgDuration(5);
+    setProgRoleId('');
+    setProgGroupId('');
+    setProgPersonId('');
+    setProgDescription('');
     setIsProgramModalOpen(false);
     setEditingProgramItem(null);
   };
@@ -312,9 +342,38 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
 
   const handlePlanRecurring = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTemplate) return;
-    onCreateRecurring(selectedTemplate.id, recStartDate, recCount, recInterval);
+    if (!selectedTemplate || !recEndDate) return;
+    
+    const frequencyType = recFrequency === 'monthly' ? 'monthly' : 'weekly';
+    // For weekly frequencies, use the interval from the frequency selection
+    let interval: number;
+    if (recFrequency === 'monthly') {
+      interval = recMonthWeek;
+    } else if (recFrequency === 'weekly') {
+      interval = 1;
+    } else if (recFrequency === 'biweekly') {
+      interval = 2;
+    } else if (recFrequency === 'triweekly') {
+      interval = 3;
+    } else { // quadweekly
+      interval = 4;
+    }
+    
+    onCreateRecurring(
+      selectedTemplate.id, 
+      recStartDate, 
+      recEndDate,
+      frequencyType,
+      interval,
+      recStartTime || undefined
+    );
+    
     setIsRecurringModalOpen(false);
+    setRecStartTime('');
+    setRecEndDate('');
+    setRecFrequency('weekly');
+    setRecWeekInterval(1);
+    setRecMonthWeek(1);
   };
 
   const handleDeleteTemplate = (id: UUID) => {
@@ -476,14 +535,29 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
                 </section>
 
                 {/* MELLOMKJØTT: SYNKRONISERINGSKNAPP */}
-                <div className="py-2 flex justify-center border-y border-slate-50">
+                <div className={`py-4 flex justify-center border-y transition-all ${isUnsynced ? 'border-amber-200 bg-amber-50/30' : 'border-slate-50'}`}>
                   <button 
                     disabled={!isUnsynced}
                     onClick={handleSyncStaffing}
-                    className={`flex items-center gap-2 px-8 py-4 rounded-2xl font-bold transition-all shadow-lg ${isUnsynced ? 'bg-indigo-600 text-white hover:bg-indigo-700 scale-105' : 'bg-slate-100 text-slate-400 grayscale cursor-not-allowed'}`}
+                    className={`flex items-center gap-3 px-10 py-4 rounded-2xl font-bold transition-all shadow-lg ${
+                      isUnsynced 
+                        ? 'bg-indigo-600 text-white hover:bg-indigo-700 scale-105 animate-pulse shadow-indigo-500/50' 
+                        : 'bg-slate-100 text-slate-400 grayscale cursor-not-allowed'
+                    }`}
                   >
-                    {isUnsynced ? <RefreshCw className="animate-spin-slow" size={20} /> : <Save size={20} />}
-                    Lagre og synkroniser bemanning
+                    {isUnsynced ? (
+                      <>
+                        <RefreshCw className="animate-spin" size={20} />
+                        <span>Lagre og synkroniser bemanning</span>
+                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Endringer i kjøreplan</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save size={20} />
+                        <span>Lagre og synkroniser bemanning</span>
+                        <span className="text-xs bg-slate-200/50 px-2 py-0.5 rounded-full">Synkronisert</span>
+                      </>
+                    )}
                   </button>
                 </div>
 
@@ -509,50 +583,73 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
                     </div>
                   )}
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* PROGRAM-LINKEDE ROLLER */}
-                    {staffingData.programLinked.map(assign => (
-                      <div 
-                        key={assign.id} 
-                        className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 flex items-center justify-between group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-slate-200 rounded-lg text-slate-500">
-                            <Lock size={16} />
-                          </div>
-                          <div>
-                            <span className="font-bold text-slate-700 text-sm">{assign.roleName}</span>
-                            <div className="flex items-center gap-2 mt-1">
-                               <p className="text-[9px] text-indigo-500 font-bold uppercase tracking-tighter">Fra kjøreplan</p>
-                               <span className="text-[10px] font-bold text-slate-900">• {assign.personName}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <Info size={14} className="text-slate-300" />
+                  {/* SEKSJON: OPPGAVER FRA KJØREPLAN */}
+                  {staffingData.programLinked.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+                        <Library size={16} className="text-indigo-500" />
+                        <h6 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Oppgaver fra kjøreplan</h6>
+                        <span className="text-[9px] px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-bold">
+                          {staffingData.programLinked.length}
+                        </span>
                       </div>
-                    ))}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {staffingData.programLinked.map(assign => (
+                          <div 
+                            key={assign.id} 
+                            className="p-4 rounded-xl border-2 border-indigo-100 bg-indigo-50/30 flex items-center justify-between group"
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600 shrink-0">
+                                <Lock size={16} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="font-bold text-slate-800 text-sm block">{assign.roleName}</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-[9px] px-1.5 py-0.5 bg-indigo-200 text-indigo-700 font-bold uppercase tracking-tighter rounded">Fra kjøreplan</span>
+                                  <span className="text-[10px] font-semibold text-slate-700">• {assign.personName}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <Info size={14} className="text-indigo-300 shrink-0" title="Denne oppgaven er hentet fra kjøreplanen og oppdateres automatisk ved synkronisering" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                    {/* MANUELLE ROLLER */}
-                    {staffingData.manual.map(assign => {
+                  {/* SEKSJON: TILLEGGSVAKTER (MANUELLE) */}
+                  {staffingData.manual.length > 0 && (
+                    <div className="space-y-3 pt-4 border-t border-slate-200">
+                      <div className="flex items-center gap-2 pb-2">
+                        <Shield size={16} className="text-amber-500" />
+                        <h6 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Tilleggsvakter (Manuelt lagt til)</h6>
+                        <span className="text-[9px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold">
+                          {staffingData.manual.length}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {staffingData.manual.map(assign => {
                        const { recommended, others } = getCategorizedPersons(assign.service_role_id);
                        return (
                         <div 
                           key={assign.id} 
-                          className="p-4 rounded-2xl border border-slate-100 bg-white hover:border-indigo-200 shadow-sm flex flex-col gap-3 group"
+                          className="p-4 rounded-xl border-2 border-amber-200 bg-amber-50/30 hover:border-amber-300 shadow-sm flex flex-col gap-3 group"
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                            <div className="flex items-center gap-3 flex-1">
+                              <div className="p-2 bg-amber-100 rounded-lg text-amber-600 shrink-0">
                                 <Shield size={16} />
                               </div>
-                              <div>
-                                <span className="font-bold text-slate-700 text-sm">{assign.roleName}</span>
-                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Tilleggsvakt (Manuelt lagt til)</p>
+                              <div className="min-w-0 flex-1">
+                                <span className="font-bold text-slate-800 text-sm block">{assign.roleName}</span>
+                                <span className="text-[9px] px-1.5 py-0.5 bg-amber-200 text-amber-700 font-bold uppercase tracking-tighter rounded inline-block mt-1">Tilleggsvakt</span>
                               </div>
                             </div>
                             <button 
                               onClick={() => handleDeleteAssignment(assign.id)}
-                              className="p-1.5 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                              className="p-1.5 text-amber-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                              title="Fjern tilleggsvakt"
                             >
                               <Trash2 size={16} />
                             </button>
@@ -561,7 +658,7 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
                           <select 
                             value={assign.person_id || ''} 
                             onChange={(e) => handleUpdateManualAssignment(assign.id, e.target.value || null)}
-                            className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-[11px] font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-amber-500"
                           >
                             <option value="">Tildel person i mal...</option>
                             {recommended.length > 0 && (
@@ -576,7 +673,88 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
                         </div>
                       );
                     })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* HVIS INGEN OPPGAVER */}
+                  {staffingData.programLinked.length === 0 && staffingData.manual.length === 0 && (
+                    <div className="text-center py-8 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                      <Shield size={24} className="text-slate-300 mx-auto mb-2" />
+                      <p className="text-sm text-slate-500 font-semibold">Ingen bemanning satt opp ennå</p>
+                      <p className="text-xs text-slate-400 mt-1">Legg til oppgaver i kjøreplanen eller legg til tilleggsvakter manuelt</p>
+                    </div>
+                  )}
+                </section>
+
+                {/* SEKSJON 3: EKSISTERENDE ARRANGEMENTER */}
+                <section className="space-y-6 pt-6 border-t border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <h5 className="font-bold text-slate-800 flex items-center gap-2">
+                      <Calendar size={18} className="text-indigo-500" />
+                      Eksisterende Arrangementer
+                    </h5>
                   </div>
+                  
+                  {(() => {
+                    const templateOccurrences = db.eventOccurrences
+                      .filter(o => o.template_id === selectedTemplate.id)
+                      .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
+                    
+                    return templateOccurrences.length > 0 ? (
+                      <div className="space-y-3">
+                        {templateOccurrences.map(occ => (
+                          <div 
+                            key={occ.id} 
+                            className="p-4 rounded-xl border-2 border-slate-100 bg-white hover:border-indigo-200 shadow-sm flex items-center gap-4 group"
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="date"
+                                    value={occ.date}
+                                    onChange={(e) => onUpdateOccurrence(occ.id, { date: e.target.value })}
+                                    className="text-sm border border-slate-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none font-semibold"
+                                  />
+                                  <input
+                                    type="time"
+                                    value={occ.time || ''}
+                                    onChange={(e) => onUpdateOccurrence(occ.id, { time: e.target.value || undefined })}
+                                    className="text-sm border border-slate-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none font-semibold"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-slate-500">
+                                    {new Intl.DateTimeFormat('no-NO', { weekday: 'short', day: 'numeric', month: 'short' }).format(parseLocalDate(occ.date))}
+                                  </span>
+                                  {occ.time && (
+                                    <span className="text-xs font-semibold text-indigo-600">{occ.time}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[9px] px-2 py-0.5 rounded uppercase font-bold ${
+                                  occ.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
+                                }`}>
+                                  {occ.status}
+                                </span>
+                                {occ.title_override && (
+                                  <span className="text-xs text-slate-600 font-semibold">{occ.title_override}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                        <Calendar size={24} className="text-slate-300 mx-auto mb-2" />
+                        <p className="text-sm text-slate-500 font-semibold">Ingen arrangementer opprettet ennå</p>
+                        <p className="text-xs text-slate-400 mt-1">Bruk "Planlegg Serie" for å opprette arrangementer fra denne malen</p>
+                      </div>
+                    );
+                  })()}
                 </section>
               </div>
             </div>
@@ -591,11 +769,31 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
       {/* Program Item Add/Edit Modal */}
       {isProgramModalOpen && selectedTemplate && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => { setIsProgramModalOpen(false); setEditingProgramItem(null); }}></div>
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => { 
+            setIsProgramModalOpen(false); 
+            setEditingProgramItem(null);
+            // Reset alle felter
+            setProgTitle('');
+            setProgDuration(5);
+            setProgRoleId('');
+            setProgGroupId('');
+            setProgPersonId('');
+            setProgDescription('');
+          }}></div>
           <div className="relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 text-left">
             <div className="p-6 bg-indigo-700 text-white flex justify-between items-center">
               <h3 className="text-xl font-bold">{editingProgramItem ? 'Rediger Aktivitet' : 'Ny Aktivitet'}</h3>
-              <button onClick={() => { setIsProgramModalOpen(false); setEditingProgramItem(null); }}><X size={24} /></button>
+              <button onClick={() => { 
+                setIsProgramModalOpen(false); 
+                setEditingProgramItem(null);
+                // Reset alle felter
+                setProgTitle('');
+                setProgDuration(5);
+                setProgRoleId('');
+                setProgGroupId('');
+                setProgPersonId('');
+                setProgDescription('');
+              }}><X size={24} /></button>
             </div>
             <form onSubmit={handleSaveProgramItem} className="p-6 space-y-4">
               <div>
@@ -659,6 +857,17 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
                     );
                   })()}
                 </select>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1.5">Tekstboks</label>
+                <textarea 
+                  value={progDescription} 
+                  onChange={e => setProgDescription(e.target.value)} 
+                  rows={3}
+                  className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm resize-none"
+                  placeholder="Skriv inn tekst..."
+                />
               </div>
 
               <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-all">
@@ -732,16 +941,75 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onAddProgra
                 <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Startdato</label>
                 <input required type="date" value={recStartDate} onChange={e => setRecStartDate(e.target.value)} className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Antall ganger</label>
-                  <input required type="number" min="1" max="52" value={recCount} onChange={e => setRecCount(parseInt(e.target.value) || 1)} className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Intervall (dager)</label>
-                  <input required type="number" min="1" value={recInterval} onChange={e => setRecInterval(parseInt(e.target.value) || 7)} className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Start tidspunkt (valgfritt)</label>
+                <input type="time" value={recStartTime} onChange={e => setRecStartTime(e.target.value)} className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
               </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Siste dato</label>
+                <input required type="date" value={recEndDate} onChange={e => setRecEndDate(e.target.value)} className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Frekvens</label>
+                <select 
+                  value={recFrequency} 
+                  onChange={(e) => {
+                    setRecFrequency(e.target.value as 'weekly' | 'biweekly' | 'triweekly' | 'quadweekly' | 'monthly');
+                    if (e.target.value === 'monthly') {
+                      setRecWeekInterval(1);
+                    } else if (e.target.value === 'weekly') {
+                      setRecWeekInterval(1);
+                    } else if (e.target.value === 'biweekly') {
+                      setRecWeekInterval(2);
+                    } else if (e.target.value === 'triweekly') {
+                      setRecWeekInterval(3);
+                    } else if (e.target.value === 'quadweekly') {
+                      setRecWeekInterval(4);
+                    } else {
+                      setRecMonthWeek(1);
+                    }
+                  }}
+                  className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                >
+                  <option value="weekly">Hver uke</option>
+                  <option value="biweekly">Hver 2. uke</option>
+                  <option value="triweekly">Hver 3. uke</option>
+                  <option value="quadweekly">Hver 4. uke</option>
+                  <option value="monthly">En gang pr måned</option>
+                </select>
+              </div>
+              {recFrequency === 'monthly' ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Uke i måneden</label>
+                  <select 
+                    value={recMonthWeek} 
+                    onChange={(e) => setRecMonthWeek(parseInt(e.target.value))}
+                    className="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  >
+                    <option value={1}>1. uke</option>
+                    <option value={2}>2. uke</option>
+                    <option value={3}>3. uke</option>
+                    <option value={4}>4. uke</option>
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {(() => {
+                      const dayNames = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
+                      const startDateObj = new Date(recStartDate);
+                      const dayName = dayNames[startDateObj.getDay()];
+                      return `På ${dayName} i ${recMonthWeek === 1 ? 'første' : recMonthWeek === 2 ? 'andre' : recMonthWeek === 3 ? 'tredje' : 'fjerde'} uke av måneden`;
+                    })()}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-xs text-slate-500 mb-2">
+                    {recFrequency === 'weekly' && 'Arrangementet vil opprettes hver uke på samme ukedag'}
+                    {recFrequency === 'biweekly' && 'Arrangementet vil opprettes hver 2. uke på samme ukedag'}
+                    {recFrequency === 'triweekly' && 'Arrangementet vil opprettes hver 3. uke på samme ukedag'}
+                    {recFrequency === 'quadweekly' && 'Arrangementet vil opprettes hver 4. uke på samme ukedag'}
+                  </p>
+                </div>
+              )}
               <button type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-all">Start planlegging</button>
             </form>
           </div>

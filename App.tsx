@@ -2,6 +2,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AppState, Person, GroupCategory, EventOccurrence, ProgramItem, Assignment, UUID, GroupRole, Task, NoticeMessage, CoreRole, ChangeLog, OccurrenceStatus } from './types';
 import { getDB, saveDB, performBulkCopy } from './db';
+
+// Hjelpefunksjon for å parse datoer i lokal tid (Berlin time)
+const parseLocalDate = (dateString: string): Date => {
+  // dateString er i format "YYYY-MM-DD"
+  const [year, month, day] = dateString.split('-').map(Number);
+  // Opprett dato i lokal tid (Berlin time)
+  return new Date(year, month - 1, day);
+};
 import IdentityPicker from './components/IdentityPicker';
 import Dashboard from './components/Dashboard';
 import Navigation from './components/Navigation';
@@ -221,12 +229,13 @@ const App: React.FC = () => {
     });
   };
 
-  const handleCreateOccurrence = (templateId: string, date: string) => {
+  const handleCreateOccurrence = (templateId: string, date: string, time?: string) => {
     const newId = crypto.randomUUID();
     const newOccurrence: EventOccurrence = {
       id: newId,
       template_id: templateId,
       date,
+      time,
       status: OccurrenceStatus.DRAFT
     };
     
@@ -240,12 +249,124 @@ const App: React.FC = () => {
     setDb(nextDb);
   };
 
-  const handleCreateRecurringOccurrences = (templateId: string, startDate: string, count: number, intervalDays: number) => {
-    let nextDb = { ...db };
-    let currentDate = new Date(startDate);
+  const handleUpdateOccurrence = (occurrenceId: string, updates: Partial<EventOccurrence>) => {
+    setDb(prev => ({
+      ...prev,
+      eventOccurrences: prev.eventOccurrences.map(occ => 
+        occ.id === occurrenceId ? { ...occ, ...updates } : occ
+      )
+    }));
+  };
 
-    for (let i = 0; i < count; i++) {
-      const dateStr = currentDate.toISOString().split('T')[0];
+  const handleDeleteOccurrence = (occurrenceId: string) => {
+    const occ = db.eventOccurrences.find(o => o.id === occurrenceId);
+    if (!occ) return;
+    
+    const title = occ.title_override || db.eventTemplates.find(t => t.id === occ.template_id)?.title || 'Arrangementet';
+    const date = new Intl.DateTimeFormat('no-NO', { dateStyle: 'long' }).format(parseLocalDate(occ.date));
+    const timeStr = occ.time ? ` kl. ${occ.time}` : '';
+    
+    // Første bekreftelse: Vil du slette arrangementet?
+    if (!confirm(`Vil du slette arrangementet?\n\n"${title}"\n${date}${timeStr}\n\nDette vil også slette alle tilhørende programposter, bemanning og endringslogger.\n\nDenne handlingen kan ikke angres.`)) {
+      return;
+    }
+    
+    setDb(prev => ({
+      ...prev,
+      eventOccurrences: prev.eventOccurrences.filter(o => o.id !== occurrenceId),
+      assignments: prev.assignments.filter(a => a.occurrence_id !== occurrenceId),
+      programItems: prev.programItems.filter(p => p.occurrence_id !== occurrenceId),
+      changeLogs: prev.changeLogs.filter(c => c.occurrence_id !== occurrenceId)
+    }));
+  };
+
+  const handleCreateRecurringOccurrences = (
+    templateId: string, 
+    startDate: string, 
+    endDate: string,
+    frequencyType: 'weekly' | 'monthly',
+    interval: number,
+    time?: string
+  ) => {
+    let nextDb = { ...db };
+    
+    // Parse dates in local time
+    const parseLocalDate = (dateString: string): Date => {
+      const [year, month, day] = dateString.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
+    
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    let currentDate = parseLocalDate(startDate);
+    const endDateObj = parseLocalDate(endDate);
+    const startDayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
+    // Helper function to get nth occurrence of weekday in month
+    const getNthWeekdayInMonth = (year: number, month: number, n: number, targetDayOfWeek: number): Date | null => {
+      // Find first occurrence of target weekday in the month
+      const firstDay = new Date(year, month, 1);
+      const firstDayOfWeek = firstDay.getDay();
+      
+      // Calculate days to add to get to the first occurrence of target weekday
+      let daysToAdd = (targetDayOfWeek - firstDayOfWeek + 7) % 7;
+      
+      // If first day is the target weekday, daysToAdd is 0
+      // Otherwise, calculate the offset
+      const firstOccurrence = new Date(year, month, 1 + daysToAdd);
+      
+      // Add (n-1) weeks to get nth occurrence
+      const nthOccurrence = new Date(year, month, firstOccurrence.getDate() + (n - 1) * 7);
+      
+      // Check if the nth occurrence is still in the same month
+      if (nthOccurrence.getMonth() !== month) {
+        return null; // Nth occurrence doesn't exist in this month
+      }
+      
+      return nthOccurrence;
+    };
+    
+    const occurrences: { date: Date }[] = [];
+    
+    if (frequencyType === 'monthly') {
+      // Monthly: Find nth occurrence of weekday in each month
+      let checkYear = currentDate.getFullYear();
+      let checkMonth = currentDate.getMonth();
+      const endYear = endDateObj.getFullYear();
+      const endMonth = endDateObj.getMonth();
+      
+      while (checkYear < endYear || (checkYear === endYear && checkMonth <= endMonth)) {
+        const nthOccurrence = getNthWeekdayInMonth(checkYear, checkMonth, interval, startDayOfWeek);
+        
+        if (nthOccurrence && nthOccurrence >= currentDate && nthOccurrence <= endDateObj) {
+          occurrences.push({ date: new Date(nthOccurrence) });
+        }
+        
+        // Move to next month
+        checkMonth++;
+        if (checkMonth > 11) {
+          checkMonth = 0;
+          checkYear++;
+        }
+      }
+    } else {
+      // Weekly: Every N weeks
+      const intervalDays = interval * 7;
+      
+      while (currentDate <= endDateObj) {
+        occurrences.push({ date: new Date(currentDate) });
+        currentDate.setDate(currentDate.getDate() + intervalDays);
+      }
+    }
+    
+    // Create occurrences
+    occurrences.forEach(({ date }) => {
+      const dateStr = formatLocalDate(date);
       const exists = nextDb.eventOccurrences.some(o => o.template_id === templateId && o.date === dateStr);
       
       if (!exists) {
@@ -254,6 +375,7 @@ const App: React.FC = () => {
           id: newId,
           template_id: templateId,
           date: dateStr,
+          time,
           status: OccurrenceStatus.DRAFT
         };
         
@@ -261,8 +383,8 @@ const App: React.FC = () => {
         nextDb = performBulkCopy(newOccurrence, nextDb);
         nextDb = autoFillOccurrence(newId, nextDb);
       }
-      currentDate.setDate(currentDate.getDate() + intervalDays);
-    }
+    });
+    
     setDb(nextDb);
   };
 
@@ -365,22 +487,40 @@ const App: React.FC = () => {
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         {activeTab === 'dashboard' && <Dashboard db={db} currentUser={currentUser} onGoToWheel={() => setActiveTab('wheel')} onViewGroup={handleViewGroup} />}
-        {activeTab === 'calendar' && (
-          <CalendarView 
-            db={db} 
-            isAdmin={currentUser.is_admin} 
+        {activeTab === 'calendar' && (() => {
+          // Sjekk om brukeren er gruppeleder eller nestleder i noen grupper
+          const userGroupMemberships = db.groupMembers.filter(gm => gm.person_id === currentUser.id);
+          const isGroupLeader = userGroupMemberships.some(gm => gm.role === GroupRole.LEADER);
+          const isDeputyLeader = userGroupMemberships.some(gm => gm.role === GroupRole.DEPUTY_LEADER);
+          const hasGroupLeaderRights = currentUser.is_admin || isGroupLeader || isDeputyLeader;
+          
+          return (
+            <CalendarView 
+              db={db} 
+              isAdmin={hasGroupLeaderRights} 
             onUpdateAssignment={handleUpdateAssignment}
             onAddAssignment={handleAddAssignment}
             onSyncStaffing={() => {}} // Nå automatisk
             onCreateOccurrence={handleCreateOccurrence}
+            onUpdateOccurrence={handleUpdateOccurrence}
+            onDeleteOccurrence={handleDeleteOccurrence}
             onCreateRecurring={handleCreateRecurringOccurrences}
             onAddProgramItem={handleAddProgramItem}
             onUpdateProgramItem={handleUpdateProgramItem}
             onReorderProgramItems={handleReorderProgramItems}
             onDeleteProgramItem={handleDeleteProgramItem}
           />
-        )}
-        {activeTab === 'groups' && <GroupsView db={db} setDb={setDb} isAdmin={currentUser.is_admin} initialViewGroupId={initialGroupId} initialPersonId={initialPersonId} onViewPerson={handleViewPerson} />}
+          );
+        })()}
+        {activeTab === 'groups' && (() => {
+          // Sjekk om brukeren er gruppeleder eller nestleder i noen grupper
+          const userGroupMemberships = db.groupMembers.filter(gm => gm.person_id === currentUser.id);
+          const isGroupLeader = userGroupMemberships.some(gm => gm.role === GroupRole.LEADER);
+          const isDeputyLeader = userGroupMemberships.some(gm => gm.role === GroupRole.DEPUTY_LEADER);
+          const hasGroupLeaderRights = currentUser.is_admin || isGroupLeader || isDeputyLeader;
+          
+          return <GroupsView db={db} setDb={setDb} isAdmin={hasGroupLeaderRights} initialViewGroupId={initialGroupId} initialPersonId={initialPersonId} onViewPerson={handleViewPerson} />;
+        })()}
         {activeTab === 'wheel' && <YearlyWheelView db={db} isAdmin={currentUser.is_admin} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} />}
         {activeTab === 'messages' && canSeeMessages && (
           <CommunicationView db={db} currentUser={currentUser} onAddMessage={handleAddMessage} onDeleteMessage={handleDeleteMessage} />
@@ -389,7 +529,8 @@ const App: React.FC = () => {
           <MasterMenu 
             db={db} 
             setDb={setDb} 
-            onCreateRecurring={handleCreateRecurringOccurrences} 
+            onCreateRecurring={handleCreateRecurringOccurrences}
+            onUpdateOccurrence={handleUpdateOccurrence}
             onAddProgramItem={handleAddProgramItem}
             onUpdateProgramItem={handleUpdateProgramItem}
             onDeleteProgramItem={handleDeleteProgramItem}

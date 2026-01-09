@@ -3,6 +3,12 @@ import React, { useState, useMemo } from 'react';
 import { AppState, Task, Person, UUID } from '../types';
 import { Calendar, Plus, Target, X, Trash2, Edit2, CheckCircle2, AlertTriangle, FileText, User, ArrowRight, Clock } from 'lucide-react';
 
+// Hjelpefunksjon for å parse datoer i lokal tid (Berlin time)
+const parseLocalDate = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 interface Props {
   db: AppState;
   isAdmin: boolean;
@@ -18,7 +24,7 @@ const YearlyWheelView: React.FC<Props> = ({ db, isAdmin, onAddTask, onUpdateTask
   const globalTasks = useMemo(() => {
     return db.tasks
       .filter(t => t.is_global)
-      .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+      .sort((a, b) => parseLocalDate(a.deadline).getTime() - parseLocalDate(b.deadline).getTime());
   }, [db.tasks]);
 
   const tasksByMonth = useMemo(() => {
@@ -26,7 +32,7 @@ const YearlyWheelView: React.FC<Props> = ({ db, isAdmin, onAddTask, onUpdateTask
     for (let i = 0; i < 12; i++) months[i] = [];
     
     globalTasks.forEach(task => {
-      const month = new Date(task.deadline).getMonth();
+      const month = parseLocalDate(task.deadline).getMonth();
       months[month].push(task);
     });
     return months;
@@ -97,7 +103,12 @@ const YearlyWheelView: React.FC<Props> = ({ db, isAdmin, onAddTask, onUpdateTask
             <div className="p-2 space-y-1 flex-1 min-h-[120px]">
               {tasksByMonth[index].length > 0 ? tasksByMonth[index].map(task => {
                 const responsible = db.persons.find(p => p.id === task.responsible_id);
-                const isOverdue = new Date(task.deadline) < new Date() && index === currentMonth;
+                const taskDate = parseLocalDate(task.deadline);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const taskDateNormalized = new Date(taskDate);
+                taskDateNormalized.setHours(0, 0, 0, 0);
+                const isOverdue = taskDateNormalized < today && index === currentMonth;
                 return (
                   <div key={task.id} className="group relative p-2 hover:bg-slate-50 rounded border border-transparent hover:border-slate-100 transition-colors">
                     <div className="flex justify-between items-start">
@@ -105,7 +116,7 @@ const YearlyWheelView: React.FC<Props> = ({ db, isAdmin, onAddTask, onUpdateTask
                         <p className="text-[13px] font-semibold text-slate-800 leading-tight truncate pr-4">{task.title}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className={`text-[10px] font-bold flex items-center gap-1 ${isOverdue ? 'text-rose-500' : 'text-slate-400'}`}>
-                            <Clock size={10} /> {new Date(task.deadline).getDate()}.
+                            <Clock size={10} /> {taskDate.getDate()}.
                           </span>
                           {responsible && (
                             <span className="text-[10px] font-medium text-slate-500 flex items-center gap-1 truncate max-w-[80px]">

@@ -1,16 +1,109 @@
 
 import { AppState, UUID, Assignment, Task, EventOccurrence, ProgramItem, OccurrenceStatus } from './types';
-import { INITIAL_DATA } from './constants';
+import { POPULATED_DATA } from './constants';
 
 const DB_KEY = 'eventmaster_lmk_db';
 
 export const getDB = (): AppState => {
   const data = localStorage.getItem(DB_KEY);
-  return data ? JSON.parse(data) : INITIAL_DATA;
+  if (!data) {
+    // Ingen data i localStorage, bruk POPULATED_DATA
+    return POPULATED_DATA;
+  }
+  
+  const parsedData: AppState = JSON.parse(data);
+  
+  // Sjekk om vi mangler familie-data eller tasks (enten tom array eller undefined)
+  const hasFamilies = parsedData.families && Array.isArray(parsedData.families) && parsedData.families.length > 0;
+  const hasFamilyMembers = parsedData.familyMembers && Array.isArray(parsedData.familyMembers) && parsedData.familyMembers.length > 0;
+  const hasTasks = parsedData.tasks && Array.isArray(parsedData.tasks) && parsedData.tasks.length > 0;
+  
+  // Hvis localStorage mangler families, familyMembers eller tasks, merge med POPULATED_DATA
+  if (!hasFamilies || !hasFamilyMembers || !hasTasks) {
+    console.log('Data mangler i localStorage, legger til fra POPULATED_DATA', {
+      hasFamilies,
+      hasFamilyMembers,
+      hasTasks,
+      populatedFamilies: POPULATED_DATA.families.length,
+      populatedFamilyMembers: POPULATED_DATA.familyMembers.length,
+      populatedTasks: POPULATED_DATA.tasks.length
+    });
+    
+    // Finn eksisterende person-IDer og navn for å unngå duplikater
+    const existingPersonIds = new Set(parsedData.persons?.map(p => p.id) || []);
+    const existingPersonNames = new Set(parsedData.persons?.map(p => p.name) || []);
+    
+    // Legg til nye personer som ikke allerede finnes
+    const newPersons = POPULATED_DATA.persons.filter(p => 
+      !existingPersonIds.has(p.id) && !existingPersonNames.has(p.name)
+    );
+    
+    // Finn eksisterende groupMember-koblinger
+    const existingGroupMemberKeys = new Set(
+      (parsedData.groupMembers || []).map(gm => `${gm.person_id}-${gm.group_id}`)
+    );
+    
+    // Legg til nye groupMember-koblinger
+    const newGroupMembers = POPULATED_DATA.groupMembers.filter(gm => 
+      !existingGroupMemberKeys.has(`${gm.person_id}-${gm.group_id}`)
+    );
+    
+    // Finn eksisterende tasks basert på title og deadline for å unngå duplikater
+    const existingTaskKeys = new Set(
+      (parsedData.tasks || []).map(t => `${t.title}-${t.deadline}`)
+    );
+    
+    // Legg til nye tasks som ikke allerede finnes
+    const newTasks = POPULATED_DATA.tasks.filter(t => 
+      !existingTaskKeys.has(`${t.title}-${t.deadline}`)
+    );
+    
+    const mergedData = {
+      ...parsedData,
+      families: hasFamilies ? parsedData.families : POPULATED_DATA.families,
+      familyMembers: hasFamilyMembers ? parsedData.familyMembers : POPULATED_DATA.familyMembers,
+      tasks: hasTasks ? parsedData.tasks : [...(parsedData.tasks || []), ...newTasks],
+      persons: [...(parsedData.persons || []), ...newPersons],
+      groupMembers: [...(parsedData.groupMembers || []), ...newGroupMembers]
+    };
+    
+    // Lagre merged data tilbake til localStorage
+    localStorage.setItem(DB_KEY, JSON.stringify(mergedData));
+    
+    return mergedData;
+  }
+  
+  return parsedData;
 };
 
 export const saveDB = (state: AppState) => {
   localStorage.setItem(DB_KEY, JSON.stringify(state));
+};
+
+// Hjelpefunksjon for å resettere til POPULATED_DATA (kan kalles fra konsollen)
+export const resetToPopulatedData = () => {
+  localStorage.setItem(DB_KEY, JSON.stringify(POPULATED_DATA));
+  return POPULATED_DATA;
+};
+
+// Debug-funksjon for å sjekke familie-data
+export const debugFamilyData = (): { 
+  localStorage: { families: number, familyMembers: number },
+  populated: { families: number, familyMembers: number }
+} => {
+  const localData = localStorage.getItem(DB_KEY);
+  const parsed = localData ? JSON.parse(localData) : null;
+  
+  return {
+    localStorage: {
+      families: parsed?.families?.length || 0,
+      familyMembers: parsed?.familyMembers?.length || 0
+    },
+    populated: {
+      families: POPULATED_DATA.families.length,
+      familyMembers: POPULATED_DATA.familyMembers.length
+    }
+  };
 };
 
 /**

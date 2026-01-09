@@ -1,5 +1,5 @@
 
-import { AppState, GroupCategory, GroupRole, CoreRole } from './types';
+import { AppState, GroupCategory, GroupRole, CoreRole, Person, Family, FamilyMember, FamilyRole, ServiceRole, GroupMember, GroupServiceRole, UUID, Task } from './types';
 
 export const INITIAL_DATA: AppState = {
   persons: [
@@ -220,7 +220,7 @@ export const INITIAL_DATA: AppState = {
     { id: 'pi3', template_id: 't1', title: 'Bønn', duration_minutes: 2, service_role_id: 'sr1', order: 3 },
     { id: 'pi9', template_id: 't1', title: 'Tale / undervisning', duration_minutes: 20, service_role_id: 'sr2', order: 6 },
   ],
-  tasks: [],
+  tasks: [], // Vil bli populert av generateYearlyWheelTasks()
   noticeMessages: [
     {
       id: 'm1',
@@ -234,4 +234,351 @@ export const INITIAL_DATA: AppState = {
   changeLogs: [],
   families: [],
   familyMembers: []
+};
+
+// JSON-data for familier
+const FAMILY_DATA = [
+  {
+    "familieNavn": "Lovsang",
+    "voksne": [
+      { "navn": "Lise Lovsang", "rolle": "Lovsang", "sivilstand": "Gift med Lars", "instruks": "Leder lovsangsteamet" },
+      { "navn": "Lars Lyd", "rolle": "Lyd", "sivilstand": "Gift med Lise", "instruks": "Ansvarlig for FOH og lydsjekk" }
+    ],
+    "barn": [
+      { "navn": "Lille-Lise Jr.", "alder": 5, "avdeling": "Barnekirke (Småbarn)" },
+      { "navn": "Lukas Lovsang", "alder": 8, "avdeling": "Barnekirke (Skolebarn)" }
+    ]
+  },
+  {
+    "familieNavn": "Møtevert",
+    "voksne": [
+      { "navn": "Morten Møtevert", "rolle": "Møteleder", "sivilstand": "Gift med Vigdis", "instruks": "Sy sammen gudstjenesten" },
+      { "navn": "Vigdis Vertskap", "rolle": "Møtevert", "sivilstand": "Gift med Morten", "instruks": "Velkomst og nattverd" }
+    ],
+    "barn": [
+      { "navn": "Marius Møtevert", "alder": 12, "avdeling": "Tweens" },
+      { "navn": "Mille Møtevert", "alder": 3, "avdeling": "Barnekirke (Knøtt)" },
+      { "navn": "Mats Møtevert", "alder": 6, "avdeling": "Barnekirke (Skolebarn)" }
+    ]
+  },
+  {
+    "familieNavn": "Barnekirke/Bilde",
+    "voksne": [
+      { "navn": "Beate Barnekirke", "rolle": "Barnekirke", "sivilstand": "Gift med Bjarne", "instruks": "Ansvarlig for barnas samling" },
+      { "navn": "Bjarne Bilde", "rolle": "Bilde", "sivilstand": "Gift med Beate", "instruks": "Styring av tekst og skjerm" }
+    ],
+    "barn": [
+      { "navn": "Benny Barnekirke", "alder": 10, "avdeling": "Barnekirke (Skolebarn)" }
+    ]
+  },
+  {
+    "familieNavn": "Taler/Forbønn",
+    "voksne": [
+      { "navn": "Thomas Taler", "rolle": "Taler", "sivilstand": "Gift med Frida", "instruks": "Dagens undervisning" },
+      { "navn": "Frida Forbønn", "rolle": "Forbønn", "sivilstand": "Gift med Thomas", "instruks": "Bistå ved bønnestasjoner" }
+    ],
+    "barn": [
+      { "navn": "Thea Taler", "alder": 7, "avdeling": "Barnekirke (Skolebarn)" },
+      { "navn": "Tobias Taler", "alder": 4, "avdeling": "Barnekirke (Knøtt)" },
+      { "navn": "Tiril Taler", "alder": 2, "avdeling": "Småbarn" },
+      { "navn": "Teodor Taler", "alder": 9, "avdeling": "Barnekirke (Skolebarn)" }
+    ]
+  }
+];
+
+// Funksjon for å populere familiedata
+function populateFamilyData(baseData: AppState): AppState {
+  const newPersons: Person[] = [...baseData.persons];
+  const newFamilies: Family[] = [...baseData.families];
+  const newFamilyMembers: FamilyMember[] = [...baseData.familyMembers];
+  const newServiceRoles: ServiceRole[] = [...baseData.serviceRoles];
+  const newGroupMembers: GroupMember[] = [...baseData.groupMembers];
+  const newGroupServiceRoles: GroupServiceRole[] = [...baseData.groupServiceRoles];
+  
+  // Mapping av rolle-navn til service role ID-er
+  const roleNameToServiceRoleId: Record<string, string> = {
+    'Lovsang': 'sr5',
+    'Lyd': 'sr6',
+    'Møteleder': 'sr1',
+    'Møtevert': 'sr9',
+    'Barnekirke': 'sr4',
+    'Bilde': 'sr7',
+    'Taler': 'sr2',
+    'Forbønn': 'sr3'
+  };
+
+  // Mapping av rolle-navn til gruppe ID-er
+  const roleNameToGroupId: Record<string, string> = {
+    'Lovsang': 'g1',
+    'Lyd': 'g2',
+    'Møteleder': 'g4',
+    'Møtevert': 'g3',
+    'Barnekirke': 'g5',
+    'Bilde': 'g2',
+    'Taler': 'g4',
+    'Forbønn': 'g4'
+  };
+
+  let personCounter = 100; // Start fra 100 for å unngå konflikter
+  let familyCounter = 1;
+  let familyMemberCounter = 1;
+
+  FAMILY_DATA.forEach(familyData => {
+    // Opprett familie
+    const familyId = `f${familyCounter++}`;
+    const family: Family = {
+      id: familyId,
+      name: `Familien ${familyData.familieNavn}`,
+      created_at: new Date().toISOString()
+    };
+    newFamilies.push(family);
+
+    // Opprett personer for voksne
+    const adultPersons: Person[] = [];
+    familyData.voksne.forEach(voksen => {
+      let person: Person;
+      const existingPersonIndex = newPersons.findIndex(p => p.name === voksen.navn);
+      
+      if (existingPersonIndex === -1) {
+        // Opprett ny person
+        const personId = `p${personCounter++}`;
+        person = {
+          id: personId,
+          name: voksen.navn,
+          email: `${voksen.navn.toLowerCase().replace(/\s+/g, '.')}@lmk.no`,
+          phone: `900 ${Math.floor(Math.random() * 90 + 10)} ${Math.floor(Math.random() * 900 + 100)}`,
+          is_admin: false,
+          is_active: true,
+          core_role: CoreRole.MEMBER
+        };
+        newPersons.push(person);
+      } else {
+        // Bruk eksisterende person
+        person = newPersons[existingPersonIndex];
+      }
+      
+      adultPersons.push(person);
+
+      // Koble person til gruppe og service role (hvis ikke allerede koblet)
+      const serviceRoleId = roleNameToServiceRoleId[voksen.rolle];
+      const groupId = roleNameToGroupId[voksen.rolle];
+      
+      if (serviceRoleId && groupId) {
+        // Sjekk om GroupMember allerede eksisterer
+        const existingGroupMember = newGroupMembers.find(
+          gm => gm.person_id === person.id && gm.group_id === groupId
+        );
+        
+        if (!existingGroupMember) {
+          // Opprett GroupMember
+          const groupMember: GroupMember = {
+            id: `gm${personCounter++}`,
+            group_id: groupId,
+            person_id: person.id,
+            role: GroupRole.MEMBER,
+            service_role_id: serviceRoleId
+          };
+          newGroupMembers.push(groupMember);
+        } else {
+          // Oppdater eksisterende GroupMember med service_role_id hvis den mangler
+          const index = newGroupMembers.indexOf(existingGroupMember);
+          if (!existingGroupMember.service_role_id) {
+            newGroupMembers[index] = {
+              ...existingGroupMember,
+              service_role_id: serviceRoleId
+            };
+          }
+        }
+      }
+    });
+
+    // Opprett familiemedlemmer for voksne (som ektefeller/partnere)
+    adultPersons.forEach((person, index) => {
+      const familyMember: FamilyMember = {
+        id: `fm${familyMemberCounter++}`,
+        family_id: familyId,
+        person_id: person.id,
+        role: FamilyRole.PARTNER,
+        isPrimaryResidence: true
+      };
+      newFamilyMembers.push(familyMember);
+    });
+
+    // Opprett personer for barn
+    familyData.barn.forEach(barn => {
+      let person: Person;
+      const existingPersonIndex = newPersons.findIndex(p => p.name === barn.navn);
+      
+      if (existingPersonIndex === -1) {
+        // Opprett ny person
+        const personId = `p${personCounter++}`;
+        const currentYear = new Date().getFullYear();
+        const birthYear = currentYear - barn.alder;
+        
+        person = {
+          id: personId,
+          name: barn.navn,
+          birth_year: birthYear,
+          is_admin: false,
+          is_active: true,
+          core_role: CoreRole.MEMBER
+        };
+        newPersons.push(person);
+      } else {
+        // Bruk eksisterende person
+        person = newPersons[existingPersonIndex];
+      }
+
+      // Sjekk om familiemedlem allerede eksisterer
+      const existingFamilyMember = newFamilyMembers.find(
+        fm => fm.person_id === person.id && fm.family_id === familyId
+      );
+
+      if (!existingFamilyMember) {
+        // Opprett familiemedlem for barnet
+        const familyMember: FamilyMember = {
+          id: `fm${familyMemberCounter++}`,
+          family_id: familyId,
+          person_id: person.id,
+          role: FamilyRole.CHILD,
+          isPrimaryResidence: true
+        };
+        newFamilyMembers.push(familyMember);
+      }
+    });
+  });
+
+  return {
+    ...baseData,
+    persons: newPersons,
+    families: newFamilies,
+    familyMembers: newFamilyMembers,
+    groupMembers: newGroupMembers,
+    serviceRoles: newServiceRoles,
+    groupServiceRoles: newGroupServiceRoles
+  };
+}
+
+// Helper function for deterministisk ID-generering basert på tittel og deadline
+const generateTaskId = (title: string, deadline: string): string => {
+  // Bruk en enkel hash-funksjon for å generere konsistente IDer
+  const str = `${title}-${deadline}`;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  // Konverter til positivt tall og formater som UUID-lignende string
+  const positiveHash = Math.abs(hash).toString(16).padStart(8, '0');
+  return `task-${positiveHash}-${deadline.replace(/-/g, '')}`;
+};
+
+// Funksjon for å generere årshjul-tasks for et gitt år
+const generateYearlyWheelTasks = (year: number): Task[] => {
+  const tasks: Task[] = [];
+  const adminId = INITIAL_DATA.persons.find(p => p.is_admin)?.id || INITIAL_DATA.persons[0]?.id || 'p1';
+  
+  // Helper function to create date string
+  const dateStr = (month: number, day: number) => {
+    const monthStr = String(month + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    return `${year}-${monthStr}-${dayStr}`;
+  };
+  
+  // Januar (month 0)
+  tasks.push(
+    { id: generateTaskId('Rapportere trossamfunnsstatistikk', dateStr(0, 15)), title: 'Rapportere trossamfunnsstatistikk', deadline: dateStr(0, 15), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Rapportere skattemelding, AGA og skatt', dateStr(0, 31)), title: 'Rapportere skattemelding, AGA og skatt', deadline: dateStr(0, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Regnskap og planlegging av årsbudsjett', dateStr(0, 31)), title: 'Regnskap og planlegging av årsbudsjett', deadline: dateStr(0, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null }
+  );
+  
+  // Februar (month 1)
+  tasks.push(
+    { id: generateTaskId('Sende ut innkallelse til årsmøte', dateStr(1, 15)), title: 'Sende ut innkallelse til årsmøte', deadline: dateStr(1, 15), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Nominasjon av kandidater til valg', dateStr(1, 28)), title: 'Nominasjon av kandidater til valg', deadline: dateStr(1, 28), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Regnskapsrapportering til lederskapet', dateStr(1, 28)), title: 'Regnskapsrapportering til lederskapet', deadline: dateStr(1, 28), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null }
+  );
+  
+  // Mars (month 2)
+  tasks.push(
+    { id: generateTaskId('ÅRSMØTE', dateStr(2, 31)), title: 'ÅRSMØTE', deadline: dateStr(2, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('PMF (uke 11)', dateStr(2, 20)), title: 'PMF (uke 11)', deadline: dateStr(2, 20), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Rapportere menighetsstatistikk', dateStr(2, 1)), title: 'Rapportere menighetsstatistikk', deadline: dateStr(2, 1), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Månedsregnskap', dateStr(2, 31)), title: 'Månedsregnskap', deadline: dateStr(2, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null }
+  );
+  
+  // April (month 3)
+  tasks.push(
+    { id: generateTaskId('Menighetsweekend', dateStr(3, 30)), title: 'Menighetsweekend', deadline: dateStr(3, 30), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Ferdigstille kalender for høsthalvåret (Gudstjenester/medlemsmøter)', dateStr(3, 30)), title: 'Ferdigstille kalender for høsthalvåret (Gudstjenester/medlemsmøter)', deadline: dateStr(3, 30), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Melde arrangementer til utleier', dateStr(3, 30)), title: 'Melde arrangementer til utleier', deadline: dateStr(3, 30), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Rapportering av årsregnskap til MKNU (Altinn)', dateStr(3, 30)), title: 'Rapportering av årsregnskap til MKNU (Altinn)', deadline: dateStr(3, 30), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null }
+  );
+  
+  // Mai (month 4)
+  tasks.push(
+    { id: generateTaskId('Månedsregnskap og vanlig drift', dateStr(4, 31)), title: 'Månedsregnskap og vanlig drift', deadline: dateStr(4, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null }
+  );
+  
+  // Juni (month 5)
+  tasks.push(
+    { id: generateTaskId('Utegudstjeneste (Søknadsfrist 15. mai for Bananparken eller andre steder)', dateStr(5, 15)), title: 'Utegudstjeneste (Søknadsfrist 15. mai for Bananparken eller andre steder)', deadline: dateStr(5, 15), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Gudstjenesteliste for høsthalvåret (skal være klar før siste gudstjeneste i juni)', dateStr(5, 30)), title: 'Gudstjenesteliste for høsthalvåret (skal være klar før siste gudstjeneste i juni)', deadline: dateStr(5, 30), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Månedsregnskap', dateStr(5, 30)), title: 'Månedsregnskap', deadline: dateStr(5, 30), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null }
+  );
+  
+  // Juli (month 6)
+  tasks.push(
+    { id: generateTaskId('MVA-rapportering til Misjonskirken Norge', dateStr(6, 31)), title: 'MVA-rapportering til Misjonskirken Norge', deadline: dateStr(6, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null }
+  );
+  
+  // August (month 7)
+  tasks.push(
+    { id: generateTaskId('Nedsette komité for menighetsweekend', dateStr(7, 15)), title: 'Nedsette komité for menighetsweekend', deadline: dateStr(7, 15), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Fastsette datoer for lederskapet', dateStr(7, 31)), title: 'Fastsette datoer for lederskapet', deadline: dateStr(7, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Gudstjenesteledermøte', dateStr(7, 31)), title: 'Gudstjenesteledermøte', deadline: dateStr(7, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Kartlegging av frivillige til oppgaver og gudstjenester', dateStr(7, 31)), title: 'Kartlegging av frivillige til oppgaver og gudstjenester', deadline: dateStr(7, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Sjekke politiattester', dateStr(7, 31)), title: 'Sjekke politiattester', deadline: dateStr(7, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null }
+  );
+  
+  // September (month 8)
+  tasks.push(
+    { id: generateTaskId('Ferdigstille kalender for vårhalvåret (Gudstjenester/medlemsmøter)', dateStr(8, 30)), title: 'Ferdigstille kalender for vårhalvåret (Gudstjenester/medlemsmøter)', deadline: dateStr(8, 30), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Melde arrangementer til utleier', dateStr(8, 30)), title: 'Melde arrangementer til utleier', deadline: dateStr(8, 30), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Månedsregnskap', dateStr(8, 30)), title: 'Månedsregnskap', deadline: dateStr(8, 30), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null }
+  );
+  
+  // Oktober (month 9)
+  tasks.push(
+    { id: generateTaskId('Menighetsmøte', dateStr(9, 31)), title: 'Menighetsmøte', deadline: dateStr(9, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Kampanje for faste givere', dateStr(9, 31)), title: 'Kampanje for faste givere', deadline: dateStr(9, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Planleggingsstart for adventsamling', dateStr(9, 31)), title: 'Planleggingsstart for adventsamling', deadline: dateStr(9, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null }
+  );
+  
+  // November (month 10)
+  tasks.push(
+    { id: generateTaskId('Budsjettarbeid for kommende år', dateStr(10, 30)), title: 'Budsjettarbeid for kommende år', deadline: dateStr(10, 30), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Planlegging av menighetsweekend', dateStr(10, 30)), title: 'Planlegging av menighetsweekend', deadline: dateStr(10, 30), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null }
+  );
+  
+  // Desember (month 11)
+  tasks.push(
+    { id: generateTaskId('Gudstjenesteliste for vårhalvåret (skal være klar før siste gudstjeneste i desember)', dateStr(11, 20)), title: 'Gudstjenesteliste for vårhalvåret (skal være klar før siste gudstjeneste i desember)', deadline: dateStr(11, 20), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Adventsamling', dateStr(11, 24)), title: 'Adventsamling', deadline: dateStr(11, 24), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Planlegging av neste års årsmøte', dateStr(11, 31)), title: 'Planlegging av neste års årsmøte', deadline: dateStr(11, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null },
+    { id: generateTaskId('Rapportering til Misjonskirken Norge', dateStr(11, 31)), title: 'Rapportering til Misjonskirken Norge', deadline: dateStr(11, 31), responsible_id: adminId, is_global: true, occurrence_id: null, template_id: null }
+  );
+  
+  return tasks;
+};
+
+// Populer INITIAL_DATA med familiedata
+const populatedWithFamilies = populateFamilyData(INITIAL_DATA);
+
+// Legg til årshjul-tasks for inneværende år
+const currentYear = new Date().getFullYear();
+export const POPULATED_DATA: AppState = {
+  ...populatedWithFamilies,
+  tasks: [...populatedWithFamilies.tasks, ...generateYearlyWheelTasks(currentYear)]
 };

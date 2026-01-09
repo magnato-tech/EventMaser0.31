@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AppState, Group, GroupCategory, GroupRole, GroupMember, ServiceRole, UUID, Person, CoreRole, GatheringPattern, OccurrenceStatus, EventOccurrence, Assignment, Family, FamilyMember, FamilyRole } from '../types';
 import { Users, Shield, Heart, Plus, X, Search, Edit2, Star, Library, ChevronDown, Calendar, Repeat, ShieldCheck, Link as LinkIcon, ExternalLink, ListChecks, Mail, Phone, ArrowLeft, Clock, CheckCircle2, ChevronRight, User, Trash2, FileText, Info, UserPlus, MapPin, Home, Save, Baby } from 'lucide-react';
 
@@ -13,7 +13,7 @@ interface Props {
 }
 
 const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, initialPersonId, onViewPerson }) => {
-  const [activeTab, setActiveTab] = useState<'persons' | 'families' | 'fellowship' | 'service' | 'leadership' | 'roles'>('persons');
+  const [activeTab, setActiveTab] = useState<'persons' | 'families' | 'barnekirke' | 'fellowship' | 'service' | 'leadership' | 'roles'>('persons');
   
   // Modal & View States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -41,6 +41,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
   const [newPersonBirthYear, setNewPersonBirthYear] = useState('');
   const [newPersonBirthDate, setNewPersonBirthDate] = useState('');
   const [viewingFamilyId, setViewingFamilyId] = useState<UUID | null>(null);
+  const [editingFamily, setEditingFamily] = useState<Family | null>(null);
   const [isEditingFamilyAddress, setIsEditingFamilyAddress] = useState(false);
   const [editingFamilyStreetAddress, setEditingFamilyStreetAddress] = useState('');
   const [editingFamilyPostalCode, setEditingFamilyPostalCode] = useState('');
@@ -52,14 +53,38 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
 
   // Form States
   const [newGroupName, setNewGroupName] = useState('');
-  const [newGroupCategory, setNewGroupCategory] = useState<GroupCategory>(GroupCategory.SERVICE);
+  const [newGroupCategory, setNewGroupCategory] = useState<GroupCategory>(GroupCategory.BARNKIRKE);
+  const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [newGroupLink, setNewGroupLink] = useState('');
+  const [newGroupLeaderId, setNewGroupLeaderId] = useState<UUID | null>(null);
+  const [newGroupMemberIds, setNewGroupMemberIds] = useState<UUID[]>([]);
+  const [newGroupDayOfWeek, setNewGroupDayOfWeek] = useState<number>(0);
+  const [newGroupFrequency, setNewGroupFrequency] = useState<number>(1);
+  const [newGroupStartDate, setNewGroupStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [isDeletingGroup, setIsDeletingGroup] = useState<UUID | null>(null);
+  const [isAddingMemberToGroup, setIsAddingMemberToGroup] = useState(false);
+  const [memberSearchForGroup, setMemberSearchForGroup] = useState('');
+  const [newGroupMemberSearch, setNewGroupMemberSearch] = useState('');
+  
+  // Redigeringsstates for gruppe
+  const [editingGroupName, setEditingGroupName] = useState('');
+  const [editingGroupDescription, setEditingGroupDescription] = useState('');
+  const [editingGroupLink, setEditingGroupLink] = useState('');
+  const [isGatheringPatternExpanded, setIsGatheringPatternExpanded] = useState(false);
 
   // Search States
   const [memberSearch, setMemberSearch] = useState('');
   const [personSearch, setPersonSearch] = useState('');
   const [roleSearch, setRoleSearch] = useState('');
+  const [selectedRoles, setSelectedRoles] = useState<Set<'Administrator' | 'Gruppeleder' | 'Nestleder' | 'Medlem'>>(new Set());
+  const [selectedBirthYears, setSelectedBirthYears] = useState<Set<number>>(new Set());
+  const [isAccessLevelDropdownOpen, setIsAccessLevelDropdownOpen] = useState(false);
+  const [isBirthYearDropdownOpen, setIsBirthYearDropdownOpen] = useState(false);
+  const [sortColumn, setSortColumn] = useState<'name' | 'role' | 'birthDate' | 'address' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const filteredGroups = useMemo(() => {
+    if (activeTab === 'barnekirke') return db.groups.filter(g => g.category === GroupCategory.BARNKIRKE);
     if (activeTab === 'service') return db.groups.filter(g => g.category === GroupCategory.SERVICE);
     if (activeTab === 'fellowship') return db.groups.filter(g => g.category === GroupCategory.FELLOWSHIP);
     if (activeTab === 'leadership') return db.groups.filter(g => g.category === GroupCategory.STRATEGY);
@@ -101,16 +126,26 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
   useEffect(() => {
     if (manageGroupId) {
       const group = db.groups.find(g => g.id === manageGroupId);
-      if (group?.gathering_pattern) {
-        setTempPattern(group.gathering_pattern);
-      } else {
-        setTempPattern({
-          frequency_type: 'weeks',
-          interval: 2,
-          day_of_week: 0, 
-          start_date: new Date().toISOString().split('T')[0]
-        });
+      if (group) {
+        setEditingGroupName(group.name);
+        setEditingGroupDescription(group.description || '');
+        setEditingGroupLink(group.link || '');
+        if (group.gathering_pattern) {
+          setTempPattern(group.gathering_pattern);
+        } else {
+          setTempPattern({
+            frequency_type: 'weeks',
+            interval: 2,
+            day_of_week: 0, 
+            start_date: new Date().toISOString().split('T')[0]
+          });
+        }
       }
+    } else {
+      setEditingGroupName('');
+      setEditingGroupDescription('');
+      setEditingGroupLink('');
+      setTempPattern(null);
     }
   }, [manageGroupId, db.groups]);
 
@@ -132,25 +167,70 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
       .filter(gm => gm.person_id === selectedPersonId)
       .map(gm => {
         const group = db.groups.find(g => g.id === gm.group_id);
-        const role = db.serviceRoles.find(sr => sr.id === gm.service_role_id);
-        return { gm, group, role };
+        const serviceRole = gm.service_role_id ? db.serviceRoles.find(sr => sr.id === gm.service_role_id) : null;
+        return { gm, group, serviceRole };
       });
 
-    const upcomingAssignments = db.assignments
+    // Hent assignments og programposter
+    const allAssignments = db.assignments
       .filter(a => a.person_id === selectedPersonId && a.occurrence_id)
       .map(a => {
         const occ = db.eventOccurrences.find(o => o.id === a.occurrence_id);
         const role = db.serviceRoles.find(sr => sr.id === a.service_role_id);
         return { a, occ, role };
       })
-      .filter(item => item.occ && new Date(item.occ.date) >= new Date(new Date().setHours(0,0,0,0)))
-      .sort((a, b) => new Date(a.occ!.date).getTime() - new Date(b.occ!.date).getTime());
+      .filter(item => item.occ && new Date(item.occ.date) >= new Date(new Date().setHours(0,0,0,0)));
 
-    return { memberships, upcomingAssignments };
+    // Hent programposter for å inkludere dem i visningen
+    const programItems = db.programItems
+      .filter(p => p.person_id === selectedPersonId && p.occurrence_id)
+      .map(p => {
+        const occ = db.eventOccurrences.find(o => o.id === p.occurrence_id);
+        const role = p.service_role_id ? db.serviceRoles.find(sr => sr.id === p.service_role_id) : null;
+        return { p, occ, role };
+      })
+      .filter(item => item.occ && new Date(item.occ.date) >= new Date(new Date().setHours(0,0,0,0)));
+
+    // Grupper assignments per arrangement og rolle for å unngå duplikater
+    // Hvis samme rolle finnes flere ganger i samme arrangement, vis den kun én gang
+    const uniqueAssignmentsByOccurrenceAndRole = new Map<string, typeof allAssignments[0]>();
+    
+    allAssignments.forEach(item => {
+      if (!item.occ || !item.role) return;
+      // Lag en unik nøkkel basert på occurrence_id og service_role_id
+      const key = `${item.occ.id}-${item.role.id}`;
+      if (!uniqueAssignmentsByOccurrenceAndRole.has(key)) {
+        uniqueAssignmentsByOccurrenceAndRole.set(key, item);
+      }
+    });
+
+    // Legg til programposter som separate entries, men unngå duplikater hvis samme rolle allerede finnes
+    const programItemsAsEntries = programItems
+      .filter(({ occ, role }) => {
+        if (!occ || !role) return false;
+        // Inkluder kun hvis det ikke allerede finnes en assignment for samme occurrence og rolle
+        const key = `${occ.id}-${role.id}`;
+        return !uniqueAssignmentsByOccurrenceAndRole.has(key);
+      })
+      .map(({ occ, role, p }) => ({
+        a: null as any, // Programpost, ikke assignment
+        occ,
+        role,
+        programItem: p
+      }));
+
+    // Kombiner unike assignments med programposter (uten duplikater)
+    const allUpcomingEntries = [
+      ...Array.from(uniqueAssignmentsByOccurrenceAndRole.values()),
+      ...programItemsAsEntries
+    ].sort((a, b) => new Date(a.occ!.date).getTime() - new Date(b.occ!.date).getTime());
+
+    return { memberships, upcomingAssignments: allUpcomingEntries };
   }, [selectedPersonId, db]);
 
   const getIcon = (cat: GroupCategory) => {
     switch (cat) {
+      case GroupCategory.BARNKIRKE: return <Baby className="text-slate-500" size={18} />;
       case GroupCategory.SERVICE: return <Shield className="text-slate-500" size={18} />;
       case GroupCategory.FELLOWSHIP: return <Heart className="text-slate-500" size={18} />;
       case GroupCategory.STRATEGY: return <Users className="text-slate-500" size={18} />;
@@ -225,6 +305,29 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
     });
   };
 
+  const handleSetMemberRole = (memberId: UUID, role: GroupRole) => {
+    setDb(prev => {
+      const targetMember = prev.groupMembers.find(gm => gm.id === memberId);
+      if (!targetMember) return prev;
+      const personId = targetMember.person_id;
+      
+      const nextGroupMembers = prev.groupMembers.map(gm => gm.id === memberId ? { ...gm, role } : gm);
+      
+      // Oppdater core_role hvis personen blir leder
+      const nextPersons = prev.persons.map(p => {
+        if (p.id === personId) {
+          if (p.core_role === CoreRole.ADMIN || p.core_role === CoreRole.PASTOR) return p;
+          if (role === GroupRole.LEADER) return { ...p, core_role: CoreRole.TEAM_LEADER };
+          const isLeaderElsewhere = nextGroupMembers.some(gm => gm.person_id === personId && gm.role === GroupRole.LEADER);
+          return { ...p, core_role: isLeaderElsewhere ? CoreRole.TEAM_LEADER : CoreRole.MEMBER };
+        }
+        return p;
+      });
+      
+      return { ...prev, groupMembers: nextGroupMembers, persons: nextPersons };
+    });
+  };
+
   const handleAddMember = (personId: UUID) => {
     if (!manageGroupId) return;
     if (db.groupMembers.some(gm => gm.group_id === manageGroupId && gm.person_id === personId)) return;
@@ -241,21 +344,125 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
     setDb(prev => ({ ...prev, groups: prev.groups.map(g => g.id === manageGroupId ? { ...g, ...updates } : g) }));
   };
 
+  const handleSaveGroupChanges = () => {
+    if (!manageGroupId) return;
+    
+    const updates: Partial<Group> = {
+      name: editingGroupName.trim(),
+      description: editingGroupDescription.trim() || undefined,
+      link: editingGroupLink.trim() || undefined,
+      gathering_pattern: tempPattern || undefined
+    };
+    
+    handleUpdateGroupBasicInfo(updates);
+    setManageGroupId(null);
+  };
+
   const handleCreateGroup = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGroupName.trim()) return;
-    const newGroup: Group = { id: crypto.randomUUID(), name: newGroupName, category: newGroupCategory, description: '' };
-    setDb(prev => ({ ...prev, groups: [...prev.groups, newGroup] }));
+    
+    const newGroupId = crypto.randomUUID();
+    const gatheringPattern: GatheringPattern | undefined = newGroupFrequency > 0 ? {
+      frequency_type: 'weeks',
+      interval: newGroupFrequency,
+      day_of_week: newGroupDayOfWeek,
+      start_date: newGroupStartDate
+    } : undefined;
+    
+    const newGroup: Group = {
+      id: newGroupId,
+      name: newGroupName.trim(),
+      category: newGroupCategory,
+      description: newGroupDescription.trim() || undefined,
+      link: newGroupLink.trim() || undefined,
+      gathering_pattern: gatheringPattern
+    };
+    
+    setDb(prev => {
+      const newGroupMembers: GroupMember[] = [];
+      
+      // Legg til leder hvis valgt
+      if (newGroupLeaderId) {
+        newGroupMembers.push({
+          id: crypto.randomUUID(),
+          group_id: newGroupId,
+          person_id: newGroupLeaderId,
+          role: GroupRole.LEADER
+        });
+      }
+      
+      // Legg til medlemmer (unngå duplikat av leder)
+      newGroupMemberIds.forEach(personId => {
+        if (personId !== newGroupLeaderId) {
+          newGroupMembers.push({
+            id: crypto.randomUUID(),
+            group_id: newGroupId,
+            person_id: personId,
+            role: GroupRole.MEMBER
+          });
+        }
+      });
+      
+      return {
+        ...prev,
+        groups: [...prev.groups, newGroup],
+        groupMembers: [...prev.groupMembers, ...newGroupMembers]
+      };
+    });
+    
+    // Reset form
     setNewGroupName('');
+    setNewGroupDescription('');
+    setNewGroupLink('');
+    setNewGroupLeaderId(null);
+    setNewGroupMemberIds([]);
+    setNewGroupMemberSearch('');
+    setNewGroupDayOfWeek(0);
+    setNewGroupFrequency(1);
+    setNewGroupStartDate(new Date().toISOString().split('T')[0]);
+    setNewGroupCategory(GroupCategory.BARNKIRKE); // Reset til standard kategori
     setIsCreateModalOpen(false);
+  };
+
+  const handleDeleteGroup = (groupId: UUID) => {
+    if (!confirm('Er du sikker på at du vil slette denne gruppen?')) return;
+    
+    setDb(prev => ({
+      ...prev,
+      groups: prev.groups.filter(g => g.id !== groupId),
+      groupMembers: prev.groupMembers.filter(gm => gm.group_id !== groupId)
+    }));
+    
+    setIsDeletingGroup(null);
+    if (viewingGroupId === groupId) setViewingGroupId(null);
+    if (manageGroupId === groupId) setManageGroupId(null);
   };
 
   const handleCreatePerson = (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
-    const coreRole = formData.get('core_role') as CoreRole;
-    const isAdminOverride = (formData.get('is_admin') === 'true') || (coreRole === CoreRole.ADMIN) || (coreRole === CoreRole.PASTOR);
-    const newPerson: Person = { id: crypto.randomUUID(), name: formData.get('name') as string, email: formData.get('email') as string, phone: formData.get('phone') as string, social_security_number: formData.get('ssn') as string, is_admin: isAdminOverride, is_active: true, core_role: coreRole };
+    const isAdminOverride = formData.get('is_admin') === 'true';
+    const email = (formData.get('email') as string)?.trim() || undefined;
+    const phone = (formData.get('phone') as string)?.trim() || undefined;
+    const birthDate = (formData.get('birth_date') as string)?.trim() || undefined;
+    const streetAddress = (formData.get('streetAddress') as string)?.trim() || undefined;
+    const postalCode = (formData.get('postalCode') as string)?.trim() || undefined;
+    const city = (formData.get('city') as string)?.trim() || undefined;
+    const newPerson: Person = { 
+      id: crypto.randomUUID(), 
+      name: (formData.get('name') as string).trim(), 
+      email, 
+      phone, 
+      birth_date: birthDate,
+      birth_year: birthDate ? new Date(birthDate).getFullYear() : undefined,
+      streetAddress,
+      postalCode,
+      city,
+      is_admin: isAdminOverride, 
+      is_active: true, 
+      core_role: CoreRole.MEMBER 
+    };
     setDb(prev => ({ ...prev, persons: [...prev.persons, newPerson] }));
     setIsCreatePersonModalOpen(false);
   };
@@ -264,9 +471,25 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
     e.preventDefault();
     if (!editingPerson) return;
     const formData = new FormData(e.currentTarget as HTMLFormElement);
-    const coreRole = formData.get('core_role') as CoreRole;
-    const isAdminOverride = (formData.get('is_admin') === 'true') || (coreRole === CoreRole.ADMIN) || (coreRole === CoreRole.PASTOR);
-    const updatedPerson: Person = { ...editingPerson, name: formData.get('name') as string, email: formData.get('email') as string, phone: formData.get('phone') as string, social_security_number: formData.get('ssn') as string, is_admin: isAdminOverride, core_role: coreRole };
+    const isAdminOverride = formData.get('is_admin') === 'true';
+    const email = (formData.get('email') as string)?.trim() || undefined;
+    const phone = (formData.get('phone') as string)?.trim() || undefined;
+    const birthDate = (formData.get('birth_date') as string)?.trim() || undefined;
+    const streetAddress = (formData.get('streetAddress') as string)?.trim() || undefined;
+    const postalCode = (formData.get('postalCode') as string)?.trim() || undefined;
+    const city = (formData.get('city') as string)?.trim() || undefined;
+    const updatedPerson: Person = { 
+      ...editingPerson, 
+      name: (formData.get('name') as string).trim(), 
+      email, 
+      phone, 
+      birth_date: birthDate,
+      birth_year: birthDate ? new Date(birthDate).getFullYear() : undefined,
+      streetAddress,
+      postalCode,
+      city,
+      is_admin: isAdminOverride
+    };
     setDb(prev => ({ ...prev, persons: prev.persons.map(p => p.id === editingPerson.id ? updatedPerson : p) }));
     setEditingPerson(null);
   };
@@ -299,6 +522,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         // Hvis API ikke er tilgjengelig, bruk localStorage fallback
         const errorText = await response.text().catch(() => 'Ukjent feil');
         console.warn('API-kall feilet (status:', response.status, '), bruker localStorage fallback. Feilmelding:', errorText);
+        alert('⚠️ Kunne ikke koble til server. Familien lagres lokalt i nettleseren.');
         
         // Fallback: Opprett familie lokalt
         newFamily = {
@@ -308,6 +532,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         };
       } else {
         newFamily = await response.json();
+        console.log('✅ Familie opprettet i databasen');
       }
       
       // Oppdater lokal state (fungerer både for API og localStorage)
@@ -325,6 +550,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
       setIsAddMemberModalOpen(true);
     } catch (error) {
       console.error('Feil ved opprettelse av familie:', error);
+      alert('⚠️ Nettverksfeil. Familien lagres lokalt i nettleseren.');
       
       // Fallback: Opprett familie lokalt hvis fetch feiler helt (f.eks. nettverkfeil)
       const newFamily: Family = {
@@ -383,6 +609,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         if (!personResponse.ok) {
           // Fallback: Opprett person lokalt
           console.warn('API-kall feilet ved opprettelse av person, bruker localStorage fallback');
+          alert('⚠️ Kunne ikke koble til server. Personen lagres lokalt i nettleseren.');
           newPerson = {
             id: crypto.randomUUID(),
             name: memberPersonSearch.trim(),
@@ -396,6 +623,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
           };
         } else {
           newPerson = await personResponse.json();
+          console.log('✅ Person opprettet i databasen');
         }
 
         // Oppdater lokal state med ny person
@@ -408,6 +636,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         console.log('Ny person opprettet med ID:', finalPersonId);
       } catch (error) {
         console.error('Feil ved opprettelse av person:', error);
+        alert('⚠️ Nettverksfeil. Personen lagres lokalt i nettleseren.');
         
         // Fallback: Opprett person lokalt
         const newPerson: Person = {
@@ -472,6 +701,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
       if (!response.ok) {
         // Fallback: Opprett medlem lokalt
         console.warn('API-kall feilet, bruker localStorage fallback');
+        alert('⚠️ Kunne ikke koble til server. Medlemskapet lagres lokalt i nettleseren.');
         newMember = {
           id: crypto.randomUUID(),
           family_id: selectedFamilyForMember,
@@ -481,6 +711,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         };
       } else {
         newMember = await response.json();
+        console.log('✅ Medlem lagt til i databasen');
       }
       
       // Oppdater lokal state (fungerer både for API og localStorage)
@@ -503,6 +734,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
       setIsAddMemberModalOpen(false);
     } catch (error) {
       console.error('Feil ved legg-til medlem:', error);
+      alert('⚠️ Nettverksfeil. Medlemskapet lagres lokalt i nettleseren.');
       
       // Fallback: Opprett medlem lokalt
       const newMember: FamilyMember = {
@@ -552,10 +784,14 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
       });
 
       if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Ukjent feil');
+        console.warn('API-kall feilet ved oppdatering av adresse, bruker localStorage fallback');
+        alert('⚠️ Kunne ikke koble til server. Adressen lagres lokalt i nettleseren.');
         throw new Error('Kunne ikke oppdatere adresse');
       }
 
       const updatedFamily: Family = await response.json();
+      console.log('✅ Adresse oppdatert i databasen');
       
       // Oppdater lokal state
       setDb(prev => ({
@@ -566,6 +802,9 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
       setIsEditingFamilyAddress(false);
     } catch (error) {
       console.error('Feil ved oppdatering av adresse:', error);
+      if (error instanceof Error && error.message !== 'Kunne ikke oppdatere adresse') {
+        alert('⚠️ Nettverksfeil. Adressen lagres lokalt i nettleseren.');
+      }
       
       // Fallback: Oppdater lokalt
       setDb(prev => ({
@@ -579,6 +818,57 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
       }));
 
       setIsEditingFamilyAddress(false);
+    }
+  };
+
+  const handleUpdateFamily = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingFamily) return;
+
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const name = (formData.get('name') as string)?.trim() || '';
+
+    try {
+      const response = await fetch(`/api/families/${editingFamily.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn('API-kall feilet ved oppdatering av familie, bruker localStorage fallback');
+        alert('⚠️ Kunne ikke koble til server. Familien lagres lokalt i nettleseren.');
+        throw new Error('Kunne ikke oppdatere familie');
+      }
+
+      const updatedFamily: Family = await response.json();
+      console.log('✅ Familie oppdatert i databasen');
+      
+      setDb(prev => ({
+        ...prev,
+        families: prev.families.map(f => f.id === editingFamily.id ? updatedFamily : f)
+      }));
+
+      setEditingFamily(null);
+    } catch (error) {
+      console.error('Feil ved oppdatering av familie:', error);
+      if (error instanceof Error && error.message !== 'Kunne ikke oppdatere familie') {
+        alert('⚠️ Nettverksfeil. Familien lagres lokalt i nettleseren.');
+      }
+      
+      setDb(prev => ({
+        ...prev,
+        families: prev.families.map(f => f.id === editingFamily.id ? {
+          ...f,
+          name: name || f.name,
+        } : f)
+      }));
+
+      setEditingFamily(null);
     }
   };
 
@@ -599,6 +889,17 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
       return `${age} år`;
     }
     return '';
+  };
+
+  // Hjelpefunksjon for å dele navn i fornavn og etternavn
+  const splitName = (fullName: string): { firstName: string; lastName: string } => {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return { firstName: parts[0], lastName: '' };
+    }
+    const lastName = parts[parts.length - 1];
+    const firstName = parts.slice(0, -1).join(' ');
+    return { firstName, lastName };
   };
 
   const handleUpdateRole = (e: React.FormEvent) => {
@@ -643,7 +944,120 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
     }
   };
 
-  const filteredPersons = db.persons.filter(p => p.name.toLowerCase().includes(personSearch.toLowerCase())).sort((a,b) => a.name.localeCompare(b.name));
+  // Hjelpefunksjon for å beregne faktisk rolle for en person (samme logikk som i tabellen)
+  const getPersonRole = useCallback((person: Person): 'Administrator' | 'Gruppeleder' | 'Nestleder' | 'Medlem' => {
+    if (person.is_admin) return 'Administrator';
+    const groupMemberships = db.groupMembers.filter(gm => gm.person_id === person.id);
+    const isGroupLeader = groupMemberships.some(gm => gm.role === GroupRole.LEADER);
+    const isDeputyLeader = groupMemberships.some(gm => gm.role === GroupRole.DEPUTY_LEADER);
+    if (isGroupLeader) return 'Gruppeleder';
+    if (isDeputyLeader) return 'Nestleder';
+    return 'Medlem';
+  }, [db.groupMembers]);
+
+  // Hent alle unike fødselsår
+  const availableBirthYears = useMemo(() => {
+    const years = new Set<number>();
+    db.persons.forEach(p => {
+      if (p.birth_date) {
+        const year = new Date(p.birth_date).getFullYear();
+        years.add(year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // Sortert synkende (nyeste først)
+  }, [db.persons]);
+
+  // Hent alle unike roller som faktisk finnes i tabellen
+  const availableRoles = useMemo(() => {
+    const roles = new Set<'Administrator' | 'Gruppeleder' | 'Nestleder' | 'Medlem'>();
+    db.persons.forEach(p => {
+      roles.add(getPersonRole(p));
+    });
+    return Array.from(roles).sort((a, b) => {
+      // Sorter: Administrator, Gruppeleder, Nestleder, Medlem
+      const order: Record<string, number> = {
+        'Administrator': 1,
+        'Gruppeleder': 2,
+        'Nestleder': 3,
+        'Medlem': 4
+      };
+      return (order[a] || 99) - (order[b] || 99);
+    });
+  }, [db.persons, getPersonRole]);
+
+  const filteredPersons = useMemo(() => {
+    let filtered = db.persons.filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(personSearch.toLowerCase()) ||
+                           (p.email && p.email.toLowerCase().includes(personSearch.toLowerCase())) ||
+                           (p.phone && p.phone.includes(personSearch));
+      
+      // Filtrer på rolle (multi-select) - bruker faktiske roller fra tabellen
+      let matchesRoleFilter = true;
+      if (selectedRoles.size > 0) {
+        const personRole = getPersonRole(p);
+        matchesRoleFilter = selectedRoles.has(personRole);
+      }
+      
+      // Filtrer på årskull
+      let matchesBirthYear = true;
+      if (selectedBirthYears.size > 0) {
+        if (p.birth_date) {
+          const birthYear = new Date(p.birth_date).getFullYear();
+          matchesBirthYear = selectedBirthYears.has(birthYear);
+        } else {
+          matchesBirthYear = false; // Hvis ingen fødselsdato og årskull er valgt, ekskluder
+        }
+      }
+      
+      return matchesSearch && matchesRoleFilter && matchesBirthYear;
+    });
+
+    // Sortering
+    if (sortColumn) {
+      filtered = [...filtered].sort((a, b) => {
+        let comparison = 0;
+        
+        switch (sortColumn) {
+          case 'name':
+            comparison = a.name.localeCompare(b.name);
+            break;
+          case 'role':
+            // Sjekk rolle (admin > gruppeleder > nestleder > medlem)
+            const aIsAdmin = a.is_admin;
+            const bIsAdmin = b.is_admin;
+            const aGroupMemberships = db.groupMembers.filter(gm => gm.person_id === a.id);
+            const bGroupMemberships = db.groupMembers.filter(gm => gm.person_id === b.id);
+            const aIsLeader = aGroupMemberships.some(gm => gm.role === GroupRole.LEADER);
+            const bIsLeader = bGroupMemberships.some(gm => gm.role === GroupRole.LEADER);
+            const aIsDeputy = aGroupMemberships.some(gm => gm.role === GroupRole.DEPUTY_LEADER);
+            const bIsDeputy = bGroupMemberships.some(gm => gm.role === GroupRole.DEPUTY_LEADER);
+            
+            const aRoleValue = aIsAdmin ? 4 : (aIsLeader ? 3 : (aIsDeputy ? 2 : 1));
+            const bRoleValue = bIsAdmin ? 4 : (bIsLeader ? 3 : (bIsDeputy ? 2 : 1));
+            comparison = aRoleValue - bRoleValue;
+            break;
+          case 'birthDate':
+            const aDate = a.birth_date ? new Date(a.birth_date).getTime() : 0;
+            const bDate = b.birth_date ? new Date(b.birth_date).getTime() : 0;
+            comparison = aDate - bDate;
+            break;
+          case 'address':
+            const aAddr = `${a.streetAddress || ''} ${a.postalCode || ''} ${a.city || ''}`.trim();
+            const bAddr = `${b.streetAddress || ''} ${b.postalCode || ''} ${b.city || ''}`.trim();
+            comparison = aAddr.localeCompare(bAddr);
+            break;
+        }
+        
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+    } else {
+      // Standard sortering på navn hvis ingen sortering er valgt
+      filtered = filtered.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    
+    return filtered;
+  }, [db.persons, db.groupMembers, personSearch, selectedRoles, selectedBirthYears, sortColumn, sortDirection, getPersonRole]);
+  
   const filteredRoles = db.serviceRoles.filter(sr => sr.name.toLowerCase().includes(roleSearch.toLowerCase())).sort((a,b) => a.name.localeCompare(b.name));
 
   return (
@@ -655,13 +1069,13 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
           <p className="text-sm text-slate-500">Administrasjon av personer, familier, grupper og roller.</p>
         </div>
         <div className="inline-flex bg-slate-200/60 p-1 rounded-lg flex-wrap gap-1">
-          {(['persons', 'families', 'fellowship', 'service', 'leadership', 'roles'] as const).map(tab => (
+          {(['persons', 'families', 'barnekirke', 'fellowship', 'service', 'leadership', 'roles'] as const).map(tab => (
             <button 
               key={tab}
               onClick={() => { setActiveTab(tab); setSelectedPersonId(null); }} 
               className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${activeTab === tab && !selectedPersonId ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
             >
-              {tab === 'persons' ? 'Personer' : tab === 'families' ? 'Familier' : tab === 'fellowship' ? 'Husgrupper' : tab === 'service' ? 'Team' : tab === 'leadership' ? 'Ledelse' : 'Roller'}
+              {tab === 'persons' ? 'Personer' : tab === 'families' ? 'Familier' : tab === 'barnekirke' ? 'Barnekirke' : tab === 'fellowship' ? 'Husgrupper' : tab === 'service' ? 'Team' : tab === 'leadership' ? 'Ledelse' : 'Roller'}
             </button>
           ))}
         </div>
@@ -675,9 +1089,23 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 <button onClick={() => setSelectedPersonId(null)} className="p-2 bg-white rounded-lg shadow-sm border border-slate-200 hover:bg-slate-50 transition-all text-slate-600"><ArrowLeft size={18}/></button>
                 <h3 className="text-lg font-bold text-slate-900">Medlemskort: {selectedPerson.name}</h3>
               </div>
-              <button onClick={() => setSelectedPersonId(null)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
-                <X size={20} className="text-slate-600" />
-              </button>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingPerson(selectedPerson);
+                    }} 
+                    className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
+                    title="Rediger person"
+                  >
+                    <Edit2 size={18} className="text-slate-600" />
+                  </button>
+                )}
+                <button onClick={() => setSelectedPersonId(null)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+                  <X size={20} className="text-slate-600" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6">
         <div className="animate-in slide-in-from-bottom-2 duration-300 space-y-6">
@@ -692,9 +1120,32 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     </div>
                     <div>
                       <h4 className="text-lg font-bold text-slate-900">{selectedPerson.name}</h4>
-                      <span className={`inline-block mt-1 px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight ${getCoreRoleColor(selectedPerson.core_role)}`}>
-                        {getCoreRoleLabel(selectedPerson.core_role)}
-                      </span>
+                      {(() => {
+                        // Sjekk om personen er gruppeleder eller nestleder i noen grupper
+                        const groupMemberships = db.groupMembers.filter(gm => gm.person_id === selectedPersonId);
+                        const isGroupLeader = groupMemberships.some(gm => gm.role === GroupRole.LEADER);
+                        const isDeputyLeader = groupMemberships.some(gm => gm.role === GroupRole.DEPUTY_LEADER);
+                        
+                        if (selectedPerson.is_admin) {
+                          return (
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight bg-indigo-100 text-indigo-700 border-indigo-200">
+                              Administrator
+                            </span>
+                          );
+                        } else if (isGroupLeader || isDeputyLeader) {
+                          return (
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight bg-amber-100 text-amber-700 border-amber-200">
+                              {isGroupLeader ? 'Gruppeleder' : 'Nestleder'}
+                            </span>
+                          );
+                        } else {
+                          return (
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight bg-slate-100 text-slate-600 border-slate-200">
+                              Medlem
+                            </span>
+                          );
+                        }
+                      })()}
                     </div>
                   </div>
 
@@ -704,7 +1155,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                       <div className="p-2 bg-slate-50 rounded-lg text-slate-400 border border-slate-100"><Mail size={16} /></div>
                       <div className="min-w-0">
                         <p className="text-[10px] text-slate-400 font-medium leading-none mb-1">E-post</p>
-                        <p className="text-sm font-semibold text-slate-700 truncate">{selectedPerson.email}</p>
+                        <p className="text-sm font-semibold text-slate-700 truncate">{selectedPerson.email || '–'}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -714,6 +1165,21 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                         <p className="text-sm font-semibold text-slate-700">{selectedPerson.phone || '–'}</p>
                       </div>
                     </div>
+                    {(selectedPerson.birth_date || selectedPerson.birth_year) && (
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-slate-50 rounded-lg text-slate-400 border border-slate-100"><Calendar size={16} /></div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-medium leading-none mb-1">Fødselsdato</p>
+                          <p className="text-sm font-semibold text-slate-700">
+                            {selectedPerson.birth_date 
+                              ? new Intl.DateTimeFormat('no-NO', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(selectedPerson.birth_date))
+                              : selectedPerson.birth_year 
+                                ? `Født ${selectedPerson.birth_year}`
+                                : '–'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </section>
              </div>
@@ -725,27 +1191,54 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                    <Users className="text-slate-400" size={18} />
                    <h4 className="text-sm font-bold text-slate-800">Gruppemedlemskap</h4>
                  </div>
-                 <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                   {personData?.memberships.map(({ gm, group, role }) => (
-                     <div key={gm.id} className="p-3 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-all flex items-center justify-between group">
-                       <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 border border-slate-200">
-                           {group && getIcon(group.category)}
-                         </div>
-                         <div>
-                           <p className="font-bold text-slate-800 text-sm">{group?.name}</p>
-                           <p className="text-[10px] text-slate-500 font-medium">
-                             {gm.role === GroupRole.LEADER ? 'Gruppeleder' : role?.name || 'Medlem'}
-                           </p>
-                         </div>
-                       </div>
-                       {gm.role === GroupRole.LEADER && <Star size={14} className="text-amber-500 fill-amber-500" />}
-                     </div>
-                   ))}
-                   {personData?.memberships.length === 0 && (
-                     <p className="col-span-full text-center py-6 text-slate-400 text-xs italic">Ingen registrerte medlemskap.</p>
-                   )}
-                 </div>
+                <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {personData?.memberships.map(({ gm, group, serviceRole }) => {
+                    // Først sjekk om personen er gruppeleder eller nestleder
+                    const isLeader = gm.role === GroupRole.LEADER;
+                    const isDeputyLeader = gm.role === GroupRole.DEPUTY_LEADER;
+
+                    return (
+                      <div key={gm.id} className="p-4 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-all group">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100 border border-slate-200 shrink-0">
+                            {group && getIcon(group.category)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-slate-800 text-sm mb-2">{group?.name}</p>
+                            <div className="space-y-1.5">
+                              {/* Vis gruppens rolle først (hvis leder/nestleder) */}
+                              {(isLeader || isDeputyLeader) && (
+                                <div className="flex items-center gap-1.5">
+                                  {isLeader && <Star size={12} className="text-amber-500 fill-amber-500 shrink-0" />}
+                                  {isDeputyLeader && <Shield size={12} className="text-indigo-500 shrink-0" />}
+                                  <p className="text-[10px] font-bold text-slate-700">
+                                    {isLeader ? 'Gruppeleder' : 'Nestleder'}
+                                  </p>
+                                </div>
+                              )}
+                              {/* Vis tjenesterolle hvis den finnes */}
+                              {serviceRole && (
+                                <div className="flex items-center gap-1.5">
+                                  <Shield size={12} className="text-indigo-500 shrink-0" />
+                                  <span className="inline-flex items-center px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded text-[9px] font-semibold">
+                                    {serviceRole.name}
+                                  </span>
+                                </div>
+                              )}
+                              {/* Vis "Medlem" hvis ingen lederrolle og ingen tjenesterolle */}
+                              {!isLeader && !isDeputyLeader && !serviceRole && (
+                                <p className="text-[10px] text-slate-400 font-medium">Medlem</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {personData?.memberships.length === 0 && (
+                    <p className="col-span-full text-center py-6 text-slate-400 text-xs italic">Ingen registrerte medlemskap.</p>
+                  )}
+                </div>
                </section>
 
                <section className="bg-slate-900 rounded-xl shadow-sm overflow-hidden">
@@ -754,21 +1247,29 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                    <h4 className="text-sm font-bold text-white">Kommende vakter</h4>
                  </div>
                  <div className="p-3 space-y-2">
-                   {personData?.upcomingAssignments.map(({ a, occ, role }) => (
-                     <div key={a.id} className="bg-slate-800/50 p-3 rounded-lg border border-slate-700 hover:border-indigo-500/50 transition-all flex items-center justify-between group">
-                       <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-slate-700 rounded-lg flex flex-col items-center justify-center text-white border border-slate-600 group-hover:border-indigo-400/30 transition-all">
-                            <span className="text-[8px] font-bold uppercase leading-none mb-0.5">{new Intl.DateTimeFormat('no-NO', { month: 'short' }).format(new Date(occ!.date))}</span>
-                            <span className="text-base font-bold leading-none">{new Date(occ!.date).getDate()}</span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-white mb-0.5">{role?.name || 'Vakt'}</p>
-                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">{occ?.title_override || 'Gudstjeneste'}</p>
-                          </div>
+                   {personData?.upcomingAssignments.map((item, index) => {
+                     const { a, occ, role, programItem } = item as any;
+                     const uniqueKey = a?.id || programItem?.id || `item-${index}`;
+                     
+                     return (
+                       <div key={uniqueKey} className="bg-slate-800/50 p-3 rounded-lg border border-slate-700 hover:border-indigo-500/50 transition-all flex items-center justify-between group">
+                         <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-slate-700 rounded-lg flex flex-col items-center justify-center text-white border border-slate-600 group-hover:border-indigo-400/30 transition-all">
+                              <span className="text-[8px] font-bold uppercase leading-none mb-0.5">{new Intl.DateTimeFormat('no-NO', { month: 'short' }).format(new Date(occ!.date))}</span>
+                              <span className="text-base font-bold leading-none">{new Date(occ!.date).getDate()}</span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white mb-0.5">{role?.name || (programItem ? programItem.title : 'Vakt')}</p>
+                              <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">
+                                {occ?.title_override || 'Gudstjeneste'}
+                                {programItem && role && ` • ${programItem.title}`}
+                              </p>
+                            </div>
+                         </div>
+                         <ChevronRight size={16} className="text-slate-600 group-hover:text-indigo-400 transition-colors" />
                        </div>
-                       <ChevronRight size={16} className="text-slate-600 group-hover:text-indigo-400 transition-colors" />
-                     </div>
-                   ))}
+                     );
+                   })}
                    {personData?.upcomingAssignments.length === 0 && (
                      <div className="text-center py-8">
                         <p className="text-xs text-slate-500">Ingen planlagte vakter.</p>
@@ -824,34 +1325,325 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         </div>
       ) : activeTab === 'persons' ? (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="relative w-full md:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input type="text" placeholder="Søk person..." value={personSearch} onChange={e => setPersonSearch(e.target.value)} className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-sm outline-none" />
+          <div className="p-4 border-b border-slate-100 space-y-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="relative w-full md:max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input type="text" placeholder="Søk person..." value={personSearch} onChange={e => setPersonSearch(e.target.value)} className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-sm outline-none" />
+              </div>
+              {isAdmin && (
+                <button onClick={() => setIsCreatePersonModalOpen(true)} className="px-4 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold shadow-sm flex items-center gap-2"><Plus size={14} /> Ny Person</button>
+              )}
             </div>
-            {isAdmin && (
-              <button onClick={() => setIsCreatePersonModalOpen(true)} className="px-4 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold shadow-sm flex items-center gap-2"><Plus size={14} /> Ny Person</button>
-            )}
+            
+            {/* Filter og Opprett gruppe fra utvalg */}
+            <div className="flex flex-wrap gap-4 items-end justify-between">
+              <div className="flex flex-wrap gap-4 items-end flex-1">
+              {/* Tilgangskontroll-filter */}
+              <div className="relative flex-1 min-w-[200px]">
+                <label className="text-xs font-semibold text-slate-600 mb-2 block">Tilgangskontroll:</label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsAccessLevelDropdownOpen(!isAccessLevelDropdownOpen)}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs text-left focus:ring-1 focus:ring-indigo-500 outline-none flex items-center justify-between hover:bg-slate-50 transition-colors"
+                  >
+                    <span className="text-slate-700">
+                      {selectedRoles.size === 0 
+                        ? 'Velg rolle...' 
+                        : selectedRoles.size === 1
+                        ? Array.from(selectedRoles)[0]
+                        : `${selectedRoles.size} roller valgt`}
+                    </span>
+                    <ChevronDown 
+                      size={14} 
+                      className={`text-slate-400 transition-transform ${isAccessLevelDropdownOpen ? 'rotate-180' : ''}`} 
+                    />
+                  </button>
+                  {isAccessLevelDropdownOpen && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-10" 
+                        onClick={() => setIsAccessLevelDropdownOpen(false)}
+                      ></div>
+                      <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        <div className="p-2 space-y-1">
+                          {availableRoles.map(role => {
+                            const isSelected = selectedRoles.has(role);
+                            return (
+                              <label
+                                key={role}
+                                className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => {
+                                    const newSet = new Set(selectedRoles);
+                                    if (isSelected) {
+                                      newSet.delete(role);
+                                    } else {
+                                      newSet.add(role);
+                                    }
+                                    setSelectedRoles(newSet);
+                                  }}
+                                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                />
+                                <span className="text-xs text-slate-700">{role}</span>
+                              </label>
+                            );
+                          })}
+                          {selectedRoles.size > 0 && (
+                            <div className="border-t border-slate-200 pt-1 mt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedRoles(new Set());
+                                  setIsAccessLevelDropdownOpen(false);
+                                }}
+                                className="w-full px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded text-left"
+                              >
+                                Nullstill alle
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {/* Årskull-filter */}
+              {availableBirthYears.length > 0 && (
+                <div className="relative flex-1 min-w-[200px]">
+                  <label className="text-xs font-semibold text-slate-600 mb-2 block">Årskull:</label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsBirthYearDropdownOpen(!isBirthYearDropdownOpen)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs text-left focus:ring-1 focus:ring-indigo-500 outline-none flex items-center justify-between hover:bg-slate-50 transition-colors"
+                    >
+                      <span className="text-slate-700">
+                        {selectedBirthYears.size === 0 
+                          ? 'Velg årskull...' 
+                          : selectedBirthYears.size === 1
+                          ? `${Array.from(selectedBirthYears)[0]}`
+                          : `${selectedBirthYears.size} årskull valgt`}
+                      </span>
+                      <ChevronDown 
+                        size={14} 
+                        className={`text-slate-400 transition-transform ${isBirthYearDropdownOpen ? 'rotate-180' : ''}`} 
+                      />
+                    </button>
+                    {isBirthYearDropdownOpen && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-10" 
+                          onClick={() => setIsBirthYearDropdownOpen(false)}
+                        ></div>
+                        <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                          <div className="p-2 space-y-1">
+                            {availableBirthYears.map(year => {
+                              const isSelected = selectedBirthYears.has(year);
+                              return (
+                                <label
+                                  key={year}
+                                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => {
+                                      const newSet = new Set(selectedBirthYears);
+                                      if (isSelected) {
+                                        newSet.delete(year);
+                                      } else {
+                                        newSet.add(year);
+                                      }
+                                      setSelectedBirthYears(newSet);
+                                    }}
+                                    className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                  />
+                                  <span className="text-xs text-slate-700">{year}</span>
+                                </label>
+                              );
+                            })}
+                            {selectedBirthYears.size > 0 && (
+                              <div className="border-t border-slate-200 pt-1 mt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedBirthYears(new Set());
+                                    setIsBirthYearDropdownOpen(false);
+                                  }}
+                                  className="w-full px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded text-left"
+                                >
+                                  Nullstill alle
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+              </div>
+              
+              {/* Opprett gruppe fra utvalg-knapp */}
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Hent alle personer som er synlige i tabellen (filteredPersons)
+                    const selectedPersonIds = filteredPersons.map(p => p.id);
+                    setNewGroupMemberIds(selectedPersonIds);
+                    setNewGroupCategory(GroupCategory.BARNKIRKE); // Sett Barnekirke som standard
+                    setIsCreateModalOpen(true);
+                  }}
+                  className="px-4 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold shadow-sm hover:bg-indigo-700 transition-all flex items-center gap-2"
+                  title={`Opprett gruppe med ${filteredPersons.length} personer fra utvalget`}
+                >
+                  <Plus size={14} />
+                  Opprett gruppe fra utvalg ({filteredPersons.length})
+                </button>
+              </div>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead><tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] text-slate-400 uppercase font-bold"><th className="py-3 px-6">Navn</th><th className="py-3 px-4">Rolle</th><th className="py-3 px-4">E-post</th><th className="py-3 px-4 text-right">Handling</th></tr></thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredPersons.map(person => (
-                  <tr key={person.id} onClick={() => setSelectedPersonId(person.id)} className="group hover:bg-slate-50 transition-colors cursor-pointer">
-                    <td className="py-3 px-6 font-bold text-sm text-slate-800">{person.name}</td>
-                    <td className="py-3 px-4"><span className={`px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-tight ${getCoreRoleColor(person.core_role)}`}>{getCoreRoleLabel(person.core_role)}</span></td>
-                    <td className="py-3 px-4 text-xs text-slate-500">{person.email}</td>
-                    <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      {isAdmin && (
-                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setEditingPerson(person)} className="p-1.5 text-slate-400 hover:text-indigo-600 bg-slate-100 rounded-md transition-colors"><Edit2 size={14} /></button>
-                          <button onClick={() => handleDeletePerson(person.id)} className="p-1.5 text-slate-400 hover:text-rose-600 bg-slate-100 rounded-md transition-colors"><Trash2 size={14} /></button>
-                        </div>
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] text-slate-400 uppercase font-bold">
+                  <th 
+                    className="py-3 px-6 cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                    onClick={() => {
+                      if (sortColumn === 'name') {
+                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortColumn('name');
+                        setSortDirection('asc');
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Navn
+                      {sortColumn === 'name' && (
+                        <span className="text-indigo-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
-                    </td>
-                  </tr>
-                ))}
+                    </div>
+                  </th>
+                  <th 
+                    className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                    onClick={() => {
+                      if (sortColumn === 'birthDate') {
+                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortColumn('birthDate');
+                        setSortDirection('asc');
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Født
+                      {sortColumn === 'birthDate' && (
+                        <span className="text-indigo-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                    onClick={() => {
+                      if (sortColumn === 'role') {
+                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortColumn('role');
+                        setSortDirection('asc');
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Rolle
+                      {sortColumn === 'role' && (
+                        <span className="text-indigo-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="py-3 px-4">E-post</th>
+                  <th className="py-3 px-4">Telefon</th>
+                  <th 
+                    className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                    onClick={() => {
+                      if (sortColumn === 'address') {
+                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortColumn('address');
+                        setSortDirection('asc');
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      Adresse
+                      {sortColumn === 'address' && (
+                        <span className="text-indigo-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="py-3 px-4 text-right">Handling</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredPersons.map(person => {
+                  const address = person.streetAddress || person.city ? 
+                    `${person.streetAddress || ''}${person.streetAddress && person.postalCode ? ', ' : ''}${person.postalCode || ''} ${person.city || ''}`.trim() : 
+                    null;
+                  
+                  // Sjekk om personen er gruppeleder eller nestleder i noen grupper
+                  const groupMemberships = db.groupMembers.filter(gm => gm.person_id === person.id);
+                  const isGroupLeader = groupMemberships.some(gm => gm.role === GroupRole.LEADER);
+                  const isDeputyLeader = groupMemberships.some(gm => gm.role === GroupRole.DEPUTY_LEADER);
+                  
+                  let roleLabel = 'Medlem';
+                  let roleColorClass = 'bg-slate-100 text-slate-600 border-slate-200';
+                  if (person.is_admin) {
+                    roleLabel = 'Administrator';
+                    roleColorClass = 'bg-indigo-100 text-indigo-700 border-indigo-200';
+                  } else if (isGroupLeader) {
+                    roleLabel = 'Gruppeleder';
+                    roleColorClass = 'bg-amber-100 text-amber-700 border-amber-200';
+                  } else if (isDeputyLeader) {
+                    roleLabel = 'Nestleder';
+                    roleColorClass = 'bg-amber-100 text-amber-700 border-amber-200';
+                  }
+                  
+                  const formattedBirthDate = person.birth_date ? new Intl.DateTimeFormat('no-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(person.birth_date)) : null;
+                  
+                  return (
+                    <tr key={person.id} onClick={() => setSelectedPersonId(person.id)} className="group hover:bg-slate-50 transition-colors cursor-pointer">
+                      <td className="py-3 px-6 font-bold text-sm text-slate-800">{person.name}</td>
+                      <td className="py-3 px-4 text-xs text-slate-500">{formattedBirthDate || '–'}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-tight ${roleColorClass}`}>
+                          {roleLabel}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-xs text-slate-500">{person.email || '–'}</td>
+                      <td className="py-3 px-4 text-xs text-slate-500">{person.phone || '–'}</td>
+                      <td className="py-3 px-4 text-xs text-slate-500 max-w-[200px] truncate" title={address || undefined}>
+                        {address || '–'}
+                      </td>
+                      <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        {isAdmin && (
+                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => setEditingPerson(person)} className="p-1.5 text-slate-400 hover:text-indigo-600 bg-slate-100 rounded-md transition-colors"><Edit2 size={14} /></button>
+                            <button onClick={() => handleDeletePerson(person.id)} className="p-1.5 text-slate-400 hover:text-rose-600 bg-slate-100 rounded-md transition-colors"><Trash2 size={14} /></button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -913,7 +1705,8 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         <div className="space-y-4">
           <div className="flex justify-end">
             {isAdmin && <button onClick={() => { 
-              const category = activeTab === 'service' ? GroupCategory.SERVICE : 
+              const category = activeTab === 'barnekirke' ? GroupCategory.BARNKIRKE :
+                              activeTab === 'service' ? GroupCategory.SERVICE : 
                               activeTab === 'fellowship' ? GroupCategory.FELLOWSHIP : 
                               GroupCategory.STRATEGY;
               setNewGroupCategory(category);
@@ -924,6 +1717,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
             {filteredGroups.map(group => {
               const members = db.groupMembers.filter(gm => gm.group_id === group.id);
               const leaders = members.filter(m => m.role === GroupRole.LEADER).map(m => db.persons.find(p => p.id === m.person_id)?.name).filter(Boolean);
+              const deputyLeaders = members.filter(m => m.role === GroupRole.DEPUTY_LEADER).map(m => db.persons.find(p => p.id === m.person_id)?.name).filter(Boolean);
               return (
                 <button 
                   key={group.id} 
@@ -932,10 +1726,34 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3"><div className="p-2 bg-slate-50 border border-slate-100 rounded-lg">{getIcon(group.category)}</div><h3 className="text-sm font-bold text-slate-900">{group.name}</h3></div>
-                    {isAdmin && (<button onClick={(e) => { e.stopPropagation(); setManageGroupId(group.id); }} className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-all"><Edit2 size={14} /></button>)}
+                    {isAdmin && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={(e) => { e.stopPropagation(); setManageGroupId(group.id); }} className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-all"><Edit2 size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); setIsDeletingGroup(group.id); }} className="p-1.5 text-slate-300 hover:text-rose-600 rounded-md transition-all"><Trash2 size={14} /></button>
+                      </div>
+                    )}
                   </div>
                   <p className="text-slate-500 text-xs mb-4 flex-grow line-clamp-2 leading-relaxed">{group.description || 'Ingen beskrivelse tilgjengelig.'}</p>
-                  <div className="pt-3 border-t border-slate-100 flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase">{members.length} medl.</span><div className="flex items-center gap-1"><Star size={10} className="text-amber-500 fill-amber-500" /><p className="text-[10px] font-bold text-slate-700 truncate max-w-[120px]">{leaders.length > 0 ? leaders[0] : 'Uten leder'}</p></div></div>
+                  <div className="pt-3 border-t border-slate-100 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">{members.length} medl.</span>
+                      {leaders.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Star size={10} className="text-amber-500 fill-amber-500" />
+                          <p className="text-[10px] font-bold text-slate-700 truncate max-w-[120px]">{leaders[0]}</p>
+                        </div>
+                      )}
+                    </div>
+                    {deputyLeaders.length > 0 && (
+                      <div className="flex items-center gap-1 justify-end">
+                        <Star size={10} className="text-blue-500 fill-blue-500" />
+                        <p className="text-[10px] font-bold text-slate-600 truncate max-w-[120px]">{deputyLeaders[0]} (Nestleder)</p>
+                      </div>
+                    )}
+                    {leaders.length === 0 && deputyLeaders.length === 0 && (
+                      <p className="text-[10px] font-bold text-slate-400 text-right">Uten leder</p>
+                    )}
+                  </div>
                 </button>
               );
             })}
@@ -1205,8 +2023,285 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         </div>
       )}
 
-      {/* Modals are kept functionally same but with reduced radii and ERP-styling */}
-      {/* ... (Existing Modal implementation logic remains, but with rounded-xl and slate-200 styling) ... */}
+      {/* Ny Rolle Modal */}
+      {isCreateServiceRoleModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px]">
+          <div className="absolute inset-0" onClick={() => setIsCreateServiceRoleModalOpen(false)}></div>
+          <div className="relative bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left">
+            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-indigo-700">
+                <Library size={20} />
+                <h3 className="font-bold">Opprett Ny Rolle</h3>
+              </div>
+              <button onClick={() => setIsCreateServiceRoleModalOpen(false)} className="p-1 hover:bg-indigo-100 rounded-md transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateServiceRole} className="p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Rollenavn</label>
+                <input
+                  autoFocus
+                  required
+                  name="name"
+                  type="text"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder="f.eks. Møteleder"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Instrukser (én per linje)</label>
+                <textarea
+                  name="instructions"
+                  rows={6}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
+                  placeholder="1. Første instruks&#10;2. Andre instruks&#10;3. Tredje instruks"
+                />
+              </div>
+              <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all">
+                Opprett Rolle
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Ny Person Modal */}
+      {isCreatePersonModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px]">
+          <div className="absolute inset-0" onClick={() => setIsCreatePersonModalOpen(false)}></div>
+          <div className="relative bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left max-h-[90vh]">
+            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-indigo-700">
+                <UserPlus size={20} />
+                <h3 className="font-bold">Opprett Ny Person</h3>
+              </div>
+              <button onClick={() => setIsCreatePersonModalOpen(false)} className="p-1 hover:bg-indigo-100 rounded-md transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreatePerson} className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Navn *</label>
+                <input
+                  autoFocus
+                  required
+                  name="name"
+                  type="text"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder="Fullt navn"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">E-post</label>
+                <input
+                  name="email"
+                  type="email"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder="person@eksempel.no"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Telefon</label>
+                <input
+                  name="phone"
+                  type="tel"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder="+47 123 45 678"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Fødselsdato</label>
+                <input
+                  name="birth_date"
+                  type="date"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Gateadresse</label>
+                <input
+                  name="streetAddress"
+                  type="text"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder="Gate og husnummer"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Postnummer</label>
+                  <input
+                    name="postalCode"
+                    type="text"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                    placeholder="0000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Poststed</label>
+                  <input
+                    name="city"
+                    type="text"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                    placeholder="By"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  name="is_admin"
+                  type="checkbox"
+                  value="true"
+                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                />
+                <label className="text-sm font-medium text-slate-700">Gi administratorrettigheter</label>
+              </div>
+              <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all">
+                Opprett Person
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Rediger Person Modal */}
+      {editingPerson && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px]">
+          <div className="absolute inset-0" onClick={() => setEditingPerson(null)}></div>
+          <div className="relative bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left max-h-[90vh]">
+            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-indigo-700">
+                <Edit2 size={20} />
+                <h3 className="font-bold">Rediger Person</h3>
+              </div>
+              <button onClick={() => setEditingPerson(null)} className="p-1 hover:bg-indigo-100 rounded-md transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdatePerson} className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Navn *</label>
+                <input
+                  autoFocus
+                  required
+                  name="name"
+                  type="text"
+                  defaultValue={editingPerson.name}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">E-post</label>
+                <input
+                  name="email"
+                  type="email"
+                  defaultValue={editingPerson.email || ''}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder="person@eksempel.no"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Telefon</label>
+                <input
+                  name="phone"
+                  type="tel"
+                  defaultValue={editingPerson.phone || ''}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder="+47 123 45 678"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Fødselsdato</label>
+                <input
+                  name="birth_date"
+                  type="date"
+                  defaultValue={editingPerson.birth_date || ''}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Gateadresse</label>
+                <input
+                  name="streetAddress"
+                  type="text"
+                  defaultValue={editingPerson.streetAddress || ''}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder="Gate og husnummer"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Postnummer</label>
+                  <input
+                    name="postalCode"
+                    type="text"
+                    defaultValue={editingPerson.postalCode || ''}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                    placeholder="0000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Poststed</label>
+                  <input
+                    name="city"
+                    type="text"
+                    defaultValue={editingPerson.city || ''}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                    placeholder="By"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  name="is_admin"
+                  type="checkbox"
+                  value="true"
+                  defaultChecked={editingPerson.is_admin}
+                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                />
+                <label className="text-sm font-medium text-slate-700">Gi administratorrettigheter</label>
+              </div>
+              <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all">
+                Oppdater Person
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Rediger Familie Modal */}
+      {editingFamily && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px]">
+          <div className="absolute inset-0" onClick={() => setEditingFamily(null)}></div>
+          <div className="relative bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left">
+            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-indigo-700">
+                <Edit2 size={20} />
+                <h3 className="font-bold">Rediger Familie</h3>
+              </div>
+              <button onClick={() => setEditingFamily(null)} className="p-1 hover:bg-indigo-100 rounded-md transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateFamily} className="p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Familienavn</label>
+                <input
+                  autoFocus
+                  name="name"
+                  type="text"
+                  defaultValue={editingFamily.name || ''}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder="f.eks. Familien Hansen"
+                />
+              </div>
+              <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all">
+                Oppdater Familie
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
       
       {/* Example for one Modal styling */}
       {viewedRole && (
@@ -1274,7 +2369,33 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
               {/* Header */}
               <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">{viewingFamily.name || 'Familie uten navn'}</h2>
+                  {parents.length > 0 ? (
+                    <div className="text-xl font-bold text-slate-900">
+                      {(() => {
+                        const familyLastName = parents[0] ? splitName(parents[0].person.name).lastName : '';
+                        return (
+                          <>
+                            {parents.map(({ person }, index) => {
+                              const { firstName } = splitName(person.name);
+                              return (
+                                <React.Fragment key={person.id}>
+                                  <span className="text-slate-900">
+                                    {firstName}
+                                  </span>
+                                  {index < parents.length - 1 ? ' og ' : ''}
+                                </React.Fragment>
+                              );
+                            })}
+                            {familyLastName && (
+                              <span className="text-slate-900"> {familyLastName}</span>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <h2 className="text-xl font-bold text-slate-900">{viewingFamily.name || 'Familie uten navn'}</h2>
+                  )}
                   {familyAddress && !isEditingFamilyAddress && (
                     <div className="flex items-center gap-2 mt-1">
                       <MapPin size={14} className="text-slate-400" />
@@ -1282,9 +2403,23 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     </div>
                   )}
                 </div>
-                <button onClick={() => setViewingFamilyId(null)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
-                  <X size={20} className="text-slate-600" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingFamily(viewingFamily);
+                      }} 
+                      className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
+                      title="Rediger familie"
+                    >
+                      <Edit2 size={18} className="text-slate-600" />
+                    </button>
+                  )}
+                  <button onClick={() => setViewingFamilyId(null)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+                    <X size={20} className="text-slate-600" />
+                  </button>
+                </div>
               </div>
 
               {/* Content */}
@@ -1367,6 +2502,14 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                       {parents.map(({ member, person }) => (
                         <div 
                           key={member.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onViewPerson) {
+                              onViewPerson(person.id);
+                            } else {
+                              setSelectedPersonId(person.id);
+                            }
+                          }}
                           className="bg-white border border-slate-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group"
                         >
                           <div className="flex items-start justify-between mb-2">
@@ -1376,17 +2519,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                               ) : (
                                 <Heart size={18} className="text-rose-500" />
                               )}
-                              <h4 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (onViewPerson) {
-                                    onViewPerson(person.id);
-                                  } else {
-                                    setSelectedPersonId(person.id);
-                                  }
-                                }}
-                                className="font-bold text-slate-900 group-hover:text-indigo-600 hover:underline cursor-pointer transition-colors"
-                              >
+                              <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                                 {person.name}
                               </h4>
                             </div>
@@ -1428,22 +2561,20 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                         return (
                           <div 
                             key={member.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onViewPerson) {
+                                onViewPerson(person.id);
+                              } else {
+                                setSelectedPersonId(person.id);
+                              }
+                            }}
                             className="bg-white border border-slate-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group"
                           >
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex items-center gap-2 flex-1">
                                 <Baby size={16} className="text-indigo-400" />
-                                <h4 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (onViewPerson) {
-                                      onViewPerson(person.id);
-                                    } else {
-                                      setSelectedPersonId(person.id);
-                                    }
-                                  }}
-                                  className="font-bold text-slate-900 group-hover:text-indigo-600 hover:underline cursor-pointer transition-colors"
-                                >
+                                <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                                   {person.name}
                                 </h4>
                               </div>
@@ -1501,6 +2632,699 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
           </div>
         );
       })()}
+
+      {/* Slett gruppe bekreftelsesdialog */}
+      {isDeletingGroup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4" onClick={() => setIsDeletingGroup(null)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Slett gruppe?</h3>
+            <p className="text-sm text-slate-600 mb-6">Er du sikker på at du vil slette denne gruppen? Denne handlingen kan ikke angres.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setIsDeletingGroup(null)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md transition-colors">Avbryt</button>
+              <button onClick={() => handleDeleteGroup(isDeletingGroup)} className="px-4 py-2 bg-rose-600 text-white rounded-md hover:bg-rose-700 transition-colors">Slett</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Opprett Gruppe Modal */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4 overflow-y-auto" onClick={() => {
+          setIsCreateModalOpen(false);
+          setNewGroupCategory(GroupCategory.BARNKIRKE); // Reset til standard kategori
+        }}>
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full my-8 flex flex-col max-h-[95vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+              <h2 className="text-xl font-bold text-slate-900">Opprett Ny Gruppe</h2>
+              <button onClick={() => {
+                setIsCreateModalOpen(false);
+                setNewGroupCategory(GroupCategory.BARNKIRKE); // Reset til standard kategori
+              }} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+                <X size={20} className="text-slate-600" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateGroup} className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Grunnleggende informasjon */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2">Grunnleggende informasjon</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Gruppenavn *</label>
+                  <input
+                    type="text"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Type gruppe *</label>
+                  <select
+                    value={newGroupCategory}
+                    onChange={(e) => setNewGroupCategory(e.target.value as GroupCategory)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                  >
+                    <option value={GroupCategory.BARNKIRKE}>Barnekirke</option>
+                    <option value={GroupCategory.FELLOWSHIP}>Husgruppe</option>
+                    <option value={GroupCategory.SERVICE}>Team</option>
+                    <option value={GroupCategory.STRATEGY}>Ledelse</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Beskrivelse</label>
+                  <textarea
+                    value={newGroupDescription}
+                    onChange={(e) => setNewGroupDescription(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                    placeholder="Beskriv gruppens formål og aktiviteter..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Link (f.eks. Google Disk)</label>
+                  <input
+                    type="url"
+                    value={newGroupLink}
+                    onChange={(e) => setNewGroupLink(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+
+              {/* Planlegging */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2">Planlegging</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Ukedag</label>
+                    <select
+                      value={newGroupDayOfWeek}
+                      onChange={(e) => setNewGroupDayOfWeek(parseInt(e.target.value))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value={0}>Søndag</option>
+                      <option value={1}>Mandag</option>
+                      <option value={2}>Tirsdag</option>
+                      <option value={3}>Onsdag</option>
+                      <option value={4}>Torsdag</option>
+                      <option value={5}>Fredag</option>
+                      <option value={6}>Lørdag</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Frekvens</label>
+                    <select
+                      value={newGroupFrequency}
+                      onChange={(e) => setNewGroupFrequency(parseInt(e.target.value))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                    >
+                      <option value={0}>Ingen planlagt</option>
+                      <option value={1}>1 gang pr uke</option>
+                      <option value={2}>1 gang pr 2 uker</option>
+                      <option value={3}>1 gang pr 3 uker</option>
+                      <option value={4}>1 gang pr 4 uker</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Startdato</label>
+                    <input
+                      type="date"
+                      value={newGroupStartDate}
+                      onChange={(e) => setNewGroupStartDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Medlemmer */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2">Medlemmer</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Gruppeleder</label>
+                  <select
+                    value={newGroupLeaderId || ''}
+                    onChange={(e) => setNewGroupLeaderId(e.target.value || null)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                  >
+                    <option value="">Ingen leder valgt</option>
+                    {db.persons.map(person => (
+                      <option key={person.id} value={person.id}>{person.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Medlemmer</label>
+                  <div className="space-y-3">
+                    {/* Søkefelt for å legge til medlemmer */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input
+                        type="text"
+                        value={newGroupMemberSearch}
+                        onChange={(e) => setNewGroupMemberSearch(e.target.value)}
+                        placeholder="Søk og legg til person..."
+                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                      />
+                      {newGroupMemberSearch && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                          {db.persons
+                            .filter(p => 
+                              p.name.toLowerCase().includes(newGroupMemberSearch.toLowerCase()) &&
+                              !newGroupMemberIds.includes(p.id) &&
+                              p.id !== newGroupLeaderId
+                            )
+                            .slice(0, 10)
+                            .map(person => (
+                              <button
+                                key={person.id}
+                                type="button"
+                                onClick={() => {
+                                  setNewGroupMemberIds([...newGroupMemberIds, person.id]);
+                                  setNewGroupMemberSearch('');
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3"
+                              >
+                                <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 font-bold text-xs">
+                                  {person.name.charAt(0)}
+                                </div>
+                                <span className="text-sm text-slate-900">{person.name}</span>
+                              </button>
+                            ))}
+                          {db.persons.filter(p => 
+                            p.name.toLowerCase().includes(newGroupMemberSearch.toLowerCase()) &&
+                            !newGroupMemberIds.includes(p.id) &&
+                            p.id !== newGroupLeaderId
+                          ).length === 0 && (
+                            <div className="px-4 py-2 text-sm text-slate-500 text-center">
+                              Ingen personer funnet
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Liste over valgte medlemmer */}
+                    {newGroupMemberIds.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {newGroupMemberIds.map(personId => {
+                          const person = db.persons.find(p => p.id === personId);
+                          if (!person) return null;
+                          return (
+                            <div
+                              key={personId}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-md text-sm"
+                            >
+                              <span className="text-indigo-900 font-medium">{person.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => setNewGroupMemberIds(newGroupMemberIds.filter(id => id !== personId))}
+                                className="text-indigo-600 hover:text-indigo-800"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end pt-4 border-t border-slate-200 shrink-0">
+                <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md transition-colors">Avbryt</button>
+                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">Opprett Gruppe</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Vis Gruppe Modal (Fullskjerm) */}
+      {viewingGroupId && viewedGroup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4" onClick={() => setViewingGroupId(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full h-full max-w-[95vw] max-h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                {getIcon(viewedGroup.category)}
+                <h2 className="text-xl font-bold text-slate-900">{viewedGroup.name}</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <>
+                    <button onClick={() => { setManageGroupId(viewingGroupId); setViewingGroupId(null); }} className="p-2 hover:bg-slate-200 rounded-lg transition-colors" title="Rediger">
+                      <Edit2 size={20} className="text-slate-600" />
+                    </button>
+                    <button onClick={() => { setIsDeletingGroup(viewingGroupId); setViewingGroupId(null); }} className="p-2 hover:bg-slate-200 rounded-lg transition-colors" title="Slett">
+                      <Trash2 size={20} className="text-slate-600" />
+                    </button>
+                  </>
+                )}
+                <button onClick={() => setViewingGroupId(null)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+                  <X size={20} className="text-slate-600" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Venstre kolonne */}
+              <div className="space-y-6">
+                {/* Beskrivelse */}
+                {viewedGroup.description && (
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800 mb-2">Beskrivelse</h3>
+                    <p className="text-sm text-slate-600 whitespace-pre-wrap">{viewedGroup.description}</p>
+                  </div>
+                )}
+
+                {/* Link */}
+                {viewedGroup.link && (
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800 mb-2">Link</h3>
+                    <a href={viewedGroup.link} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline flex items-center gap-2">
+                      <ExternalLink size={14} />
+                      {viewedGroup.link}
+                    </a>
+                  </div>
+                )}
+
+                {/* Planlegging */}
+                {viewedGroup.gathering_pattern && (
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800 mb-2">Planlegging</h3>
+                    <div className="space-y-1 text-sm text-slate-600">
+                      <p>Ukedag: {['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'][viewedGroup.gathering_pattern.day_of_week]}</p>
+                      <p>Frekvens: {viewedGroup.gathering_pattern.interval === 1 ? '1 gang pr uke' : `${viewedGroup.gathering_pattern.interval} uker`}</p>
+                      <p>Startdato: {new Date(viewedGroup.gathering_pattern.start_date).toLocaleDateString('no-NO')}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Høyre kolonne */}
+              <div className="space-y-6">
+                {/* Leder */}
+                {(() => {
+                  const leader = db.groupMembers.find(gm => gm.group_id === viewingGroupId && gm.role === GroupRole.LEADER);
+                  const leaderPerson = leader ? db.persons.find(p => p.id === leader.person_id) : null;
+                  return leaderPerson && (
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 mb-2">Gruppeleder</h3>
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onViewPerson) {
+                            onViewPerson(leaderPerson.id);
+                          } else {
+                            setSelectedPersonId(leaderPerson.id);
+                          }
+                        }}
+                        className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 hover:border-indigo-400 border border-transparent transition-all cursor-pointer group"
+                      >
+                        <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold">
+                          {leaderPerson.name.charAt(0)}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{leaderPerson.name}</p>
+                          {leaderPerson.email && <p className="text-xs text-slate-500">{leaderPerson.email}</p>}
+                          {leaderPerson.phone && <p className="text-xs text-slate-500">{leaderPerson.phone}</p>}
+                        </div>
+                        <Star size={16} className="text-amber-500 fill-amber-500 ml-auto" />
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Nestleder */}
+                {(() => {
+                  const deputyLeaders = db.groupMembers
+                    .filter(gm => gm.group_id === viewingGroupId && gm.role === GroupRole.DEPUTY_LEADER)
+                    .map(gm => db.persons.find(p => p.id === gm.person_id))
+                    .filter(Boolean) as Person[];
+                  
+                  return deputyLeaders.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 mb-2">Nestleder{deputyLeaders.length > 1 ? 'e' : ''}</h3>
+                      <div className="space-y-2">
+                        {deputyLeaders.map(person => (
+                          <div 
+                            key={person.id} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onViewPerson) {
+                                onViewPerson(person.id);
+                              } else {
+                                setSelectedPersonId(person.id);
+                              }
+                            }}
+                            className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 hover:border-blue-400 transition-all cursor-pointer group"
+                          >
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                              {person.name.charAt(0)}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{person.name}</p>
+                              {person.email && <p className="text-xs text-slate-500">{person.email}</p>}
+                              {person.phone && <p className="text-xs text-slate-500">{person.phone}</p>}
+                            </div>
+                            <Star size={16} className="text-blue-500 fill-blue-500 ml-auto" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Medlemmer */}
+                {(() => {
+                  const members = db.groupMembers
+                    .filter(gm => gm.group_id === viewingGroupId && gm.role === GroupRole.MEMBER)
+                    .map(gm => db.persons.find(p => p.id === gm.person_id))
+                    .filter(Boolean) as Person[];
+                  
+                  return members.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 mb-2">Medlemmer ({members.length})</h3>
+                      <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                        {members.map(person => (
+                          <div 
+                            key={person.id} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onViewPerson) {
+                                onViewPerson(person.id);
+                              } else {
+                                setSelectedPersonId(person.id);
+                              }
+                            }}
+                            className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 hover:border-indigo-400 border border-transparent transition-all cursor-pointer group"
+                          >
+                            <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 font-bold text-xs">
+                              {person.name.charAt(0)}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">{person.name}</p>
+                              {person.email && <p className="text-xs text-slate-500">{person.email}</p>}
+                              {person.phone && <p className="text-xs text-slate-500">{person.phone}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rediger Gruppe Modal */}
+      {manageGroupId && managedGroup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4" onClick={() => setManageGroupId(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl h-full max-h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                {getIcon(managedGroup.category)}
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Administrer {managedGroup.name}</h2>
+                  <p className="text-xs text-slate-500 uppercase font-semibold">KONFIGURASJON & TEAM</p>
+                </div>
+              </div>
+              <button onClick={() => setManageGroupId(null)} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+                <X size={20} className="text-slate-600" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-hidden flex">
+              {/* Venstre kolonne - GRUNNINFO */}
+              <div className="w-1/2 border-r border-slate-200 overflow-y-auto p-6 space-y-6">
+                <h3 className="text-sm font-bold text-slate-800 uppercase mb-4">GRUNNINFO</h3>
+                
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Gruppenavn</label>
+                  <input
+                    type="text"
+                    value={editingGroupName}
+                    onChange={(e) => setEditingGroupName(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Beskrivelse</label>
+                  <textarea
+                    value={editingGroupDescription}
+                    onChange={(e) => setEditingGroupDescription(e.target.value)}
+                    rows={6}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm resize-none"
+                    placeholder="Beskriv gruppens formål og aktiviteter..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1 flex items-center gap-2">
+                    <LinkIcon size={14} />
+                    Lenke / URL (Facebook e.l.)
+                  </label>
+                  <input
+                    type="url"
+                    value={editingGroupLink}
+                    onChange={(e) => setEditingGroupLink(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                    placeholder="https://..."
+                  />
+                </div>
+
+                {/* Samlingsplanlegging - Expandable */}
+                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setIsGatheringPatternExpanded(!isGatheringPatternExpanded)}
+                    className="w-full px-4 py-3 flex items-center justify-between bg-slate-50 hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Repeat size={16} className="text-slate-600" />
+                      <span className="text-sm font-semibold text-slate-800">SAMLINGSPLANLEGGING</span>
+                    </div>
+                    <ChevronDown size={16} className={`text-slate-600 transition-transform ${isGatheringPatternExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {isGatheringPatternExpanded && tempPattern && (
+                    <div className="p-4 space-y-4 border-t border-slate-200">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Ukedag</label>
+                          <select
+                            value={tempPattern.day_of_week}
+                            onChange={(e) => handleUpdateGatheringPattern({ day_of_week: parseInt(e.target.value) })}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                          >
+                            <option value={0}>Søndag</option>
+                            <option value={1}>Mandag</option>
+                            <option value={2}>Tirsdag</option>
+                            <option value={3}>Onsdag</option>
+                            <option value={4}>Torsdag</option>
+                            <option value={5}>Fredag</option>
+                            <option value={6}>Lørdag</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Frekvens</label>
+                          <select
+                            value={tempPattern.interval}
+                            onChange={(e) => handleUpdateGatheringPattern({ interval: parseInt(e.target.value) })}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                          >
+                            <option value={1}>1 gang pr uke</option>
+                            <option value={2}>1 gang pr 2 uker</option>
+                            <option value={3}>1 gang pr 3 uker</option>
+                            <option value={4}>1 gang pr 4 uker</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Startdato</label>
+                        <input
+                          type="date"
+                          value={tempPattern.start_date}
+                          onChange={(e) => handleUpdateGatheringPattern({ start_date: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Høyre kolonne - MEDLEMMER & TJENESTER */}
+              <div className="w-1/2 overflow-y-auto p-6 space-y-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-slate-800 uppercase">MEDLEMMER & TJENESTER</h3>
+                  {(() => {
+                    const groupMembers = db.groupMembers.filter(gm => gm.group_id === manageGroupId);
+                    return <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">{groupMembers.length} totalt</span>;
+                  })()}
+                </div>
+
+                {/* Søk og legg til person */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="text"
+                    value={memberSearchForGroup}
+                    onChange={(e) => setMemberSearchForGroup(e.target.value)}
+                    placeholder="Søk og legg til person..."
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                  />
+                  {memberSearchForGroup && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {db.persons
+                        .filter(p => 
+                          p.name.toLowerCase().includes(memberSearchForGroup.toLowerCase()) &&
+                          !db.groupMembers.some(gm => gm.group_id === manageGroupId && gm.person_id === p.id)
+                        )
+                        .map(person => (
+                          <button
+                            key={person.id}
+                            type="button"
+                            onClick={() => {
+                              handleAddMember(person.id);
+                              setMemberSearchForGroup('');
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3"
+                          >
+                            <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 font-bold text-xs">
+                              {person.name.charAt(0)}
+                            </div>
+                            <span className="text-sm text-slate-900">{person.name}</span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Medlemsliste */}
+                <div className="space-y-2">
+                  {db.groupMembers
+                    .filter(gm => gm.group_id === manageGroupId)
+                    .map(gm => {
+                      const person = db.persons.find(p => p.id === gm.person_id);
+                      if (!person) return null;
+                      
+                      const isLeader = gm.role === GroupRole.LEADER;
+                      const isDeputyLeader = gm.role === GroupRole.DEPUTY_LEADER;
+                      const serviceRole = gm.service_role_id ? db.serviceRoles.find(sr => sr.id === gm.service_role_id) : null;
+                      
+                      return (
+                        <div 
+                          key={gm.id} 
+                          onClick={(e) => {
+                            // Stopp propagering hvis brukeren klikker på knapper eller select
+                            if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('select')) {
+                              return;
+                            }
+                            e.stopPropagation();
+                            if (onViewPerson) {
+                              onViewPerson(person.id);
+                            } else {
+                              setSelectedPersonId(person.id);
+                            }
+                          }}
+                          className={`p-3 rounded-lg border-2 cursor-pointer group transition-all ${
+                            isLeader ? 'border-amber-300 bg-amber-50 hover:bg-amber-100 hover:border-amber-400' : 
+                            isDeputyLeader ? 'border-blue-300 bg-blue-50 hover:bg-blue-100 hover:border-blue-400' : 
+                            'border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-400'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                              isLeader ? 'bg-amber-200 text-amber-800' : 
+                              isDeputyLeader ? 'bg-blue-200 text-blue-800' : 
+                              'bg-slate-200 text-slate-600'
+                            }`}>
+                              {person.name.charAt(0)}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{person.name}</p>
+                              {person.email && <p className="text-xs text-slate-500">{person.email}</p>}
+                              {person.phone && <p className="text-xs text-slate-500">{person.phone}</p>}
+                            </div>
+                            {isLeader && (
+                              <span className="flex items-center gap-1 px-2 py-1 bg-amber-200 text-amber-800 rounded text-xs font-bold uppercase">
+                                <Star size={12} className="fill-amber-800" />
+                                GRUPPELEDER
+                              </span>
+                            )}
+                            {isDeputyLeader && (
+                              <span className="flex items-center gap-1 px-2 py-1 bg-blue-200 text-blue-800 rounded text-xs font-bold uppercase">
+                                <Star size={12} className="fill-blue-800" />
+                                NESTLEDER
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMember(gm.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 mt-2">
+                            <select
+                              value={gm.service_role_id || ''}
+                              onChange={(e) => handleUpdateMemberRole(gm.id, e.target.value || null)}
+                              className="flex-1 px-2 py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
+                            >
+                              <option value="">Tildel tjeneste-rolle...</option>
+                              {db.serviceRoles.map(sr => (
+                                <option key={sr.id} value={sr.id}>{sr.name}</option>
+                              ))}
+                            </select>
+                            <select
+                              value={gm.role}
+                              onChange={(e) => handleSetMemberRole(gm.id, e.target.value as GroupRole)}
+                              className="px-2 py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
+                            >
+                              <option value={GroupRole.MEMBER}>Medlem</option>
+                              <option value={GroupRole.DEPUTY_LEADER}>Nestleder</option>
+                              <option value={GroupRole.LEADER}>Leder</option>
+                            </select>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end shrink-0">
+              <button
+                onClick={handleSaveGroupChanges}
+                className="px-6 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-colors font-semibold"
+              >
+                Lukk & Ferdig
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
