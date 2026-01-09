@@ -1,13 +1,24 @@
 
 import { AppState, GroupCategory, GroupRole, CoreRole, Person, Family, FamilyMember, FamilyRole, ServiceRole, GroupMember, GroupServiceRole, UUID, Task } from './types';
 
+// Helper function to split full name into firstName and lastName
+const splitName = (fullName: string): { firstName: string; lastName: string } => {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: '' };
+  }
+  const lastName = parts[parts.length - 1];
+  const firstName = parts.slice(0, -1).join(' ');
+  return { firstName, lastName };
+};
+
 export const INITIAL_DATA: AppState = {
   persons: [
-    { id: 'p1', name: 'Anders Admin', email: 'anders@lmk.no', phone: '900 11 001', is_admin: true, is_active: true, core_role: CoreRole.ADMIN },
-    { id: 'p2', name: 'Lise Lovsang', email: 'lise@lmk.no', phone: '900 22 002', is_admin: false, is_active: true, core_role: CoreRole.TEAM_LEADER },
-    { id: 'p3', name: 'Tom Tekniker', email: 'tom@lmk.no', phone: '900 33 003', is_admin: false, is_active: true, core_role: CoreRole.MEMBER },
-    { id: 'p5', name: 'Per Pastor', email: 'per@lmk.no', phone: '900 55 005', is_admin: true, is_active: true, core_role: CoreRole.PASTOR },
-    { id: 'p7', name: 'Morten Møtevert', email: 'morten@lmk.no', phone: '900 77 007', is_admin: false, is_active: true, core_role: CoreRole.MEMBER },
+    { id: 'p1', firstName: 'Anders', lastName: 'Admin', email: 'anders@lmk.no', phone: '900 11 001', is_admin: true, is_active: true, core_role: CoreRole.ADMIN },
+    { id: 'p2', firstName: 'Lise', lastName: 'Lovsang', email: 'lise@lmk.no', phone: '900 22 002', is_admin: false, is_active: true, core_role: CoreRole.TEAM_LEADER },
+    { id: 'p3', firstName: 'Tom', lastName: 'Tekniker', email: 'tom@lmk.no', phone: '900 33 003', is_admin: false, is_active: true, core_role: CoreRole.MEMBER },
+    { id: 'p5', firstName: 'Per', lastName: 'Pastor', email: 'per@lmk.no', phone: '900 55 005', is_admin: true, is_active: true, core_role: CoreRole.PASTOR },
+    { id: 'p7', firstName: 'Morten', lastName: 'Møtevert', email: 'morten@lmk.no', phone: '900 77 007', is_admin: false, is_active: true, core_role: CoreRole.MEMBER },
   ],
   groups: [
     { id: 'g1', name: 'Lovsang', category: GroupCategory.SERVICE, description: 'Ansvarlig for musikk og tilbedelse under gudstjenester.' },
@@ -337,14 +348,18 @@ function populateFamilyData(baseData: AppState): AppState {
     const adultPersons: Person[] = [];
     familyData.voksne.forEach(voksen => {
       let person: Person;
-      const existingPersonIndex = newPersons.findIndex(p => p.name === voksen.navn);
+      const { firstName, lastName } = splitName(voksen.navn);
+      const existingPersonIndex = newPersons.findIndex(p => 
+        p.firstName === firstName && p.lastName === lastName
+      );
       
       if (existingPersonIndex === -1) {
         // Opprett ny person
         const personId = `p${personCounter++}`;
         person = {
           id: personId,
-          name: voksen.navn,
+          firstName,
+          lastName,
           email: `${voksen.navn.toLowerCase().replace(/\s+/g, '.')}@lmk.no`,
           phone: `900 ${Math.floor(Math.random() * 90 + 10)} ${Math.floor(Math.random() * 900 + 100)}`,
           is_admin: false,
@@ -407,7 +422,10 @@ function populateFamilyData(baseData: AppState): AppState {
     // Opprett personer for barn
     familyData.barn.forEach(barn => {
       let person: Person;
-      const existingPersonIndex = newPersons.findIndex(p => p.name === barn.navn);
+      const { firstName, lastName } = splitName(barn.navn);
+      const existingPersonIndex = newPersons.findIndex(p => 
+        p.firstName === firstName && p.lastName === lastName
+      );
       
       if (existingPersonIndex === -1) {
         // Opprett ny person
@@ -417,7 +435,8 @@ function populateFamilyData(baseData: AppState): AppState {
         
         person = {
           id: personId,
-          name: barn.navn,
+          firstName,
+          lastName,
           birth_year: birthYear,
           is_admin: false,
           is_active: true,

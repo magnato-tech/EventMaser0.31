@@ -165,7 +165,7 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onUpdateOcc
       .map(a => {
         const role = db.serviceRoles.find(r => r.id === a.service_role_id);
         const person = a.person_id ? db.persons.find(p => p.id === a.person_id) : null;
-        return { ...a, roleName: role?.name || 'Ukjent', personName: person?.name || 'Ledig' };
+        return { ...a, roleName: role?.name || 'Ukjent', personName: person ? `${person.firstName} ${person.lastName}` : 'Ledig' };
       });
 
     const manual = allAssignments
@@ -173,7 +173,7 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onUpdateOcc
       .map(a => {
         const role = db.serviceRoles.find(r => r.id === a.service_role_id);
         const person = a.person_id ? db.persons.find(p => p.id === a.person_id) : null;
-        return { ...a, roleName: role?.name || 'Ukjent', personName: person?.name || 'Ledig' };
+        return { ...a, roleName: role?.name || 'Ukjent', personName: person ? `${person.firstName} ${person.lastName}` : 'Ledig' };
       });
 
     return { programLinked, manual };
@@ -519,7 +519,7 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onUpdateOcc
                                 )}
                                 {person && (
                                   <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                                    <UserCheck size={10} /> {person.name}
+                                    <UserCheck size={10} /> {person.firstName} {person.lastName}
                                   </span>
                                 )}
                               </div>
@@ -663,11 +663,11 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onUpdateOcc
                             <option value="">Tildel person i mal...</option>
                             {recommended.length > 0 && (
                               <optgroup label="Anbefalt Team">
-                                {recommended.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                {recommended.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
                               </optgroup>
                             )}
                             <optgroup label="Alle Personer">
-                              {others.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                              {others.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
                             </optgroup>
                           </select>
                         </div>
@@ -847,7 +847,7 @@ const MasterMenu: React.FC<Props> = ({ db, setDb, onCreateRecurring, onUpdateOcc
                       <>
                         {recommended.length > 0 && (
                           <optgroup label="Anbefalt Team / Leder">
-                            {recommended.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            {recommended.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
                           </optgroup>
                         )}
                         <optgroup label="Alle Personer">

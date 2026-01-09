@@ -12,7 +12,7 @@ const IdentityPicker: React.FC<Props> = ({ persons, onSelect }) => {
   const [search, setSearch] = useState('');
 
   const filtered = persons.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) && p.is_active
+    `${p.firstName} ${p.lastName}`.toLowerCase().includes(search.toLowerCase()) && p.is_active
   );
 
   const getCoreRoleLabel = (role: CoreRole) => {
@@ -56,7 +56,7 @@ const IdentityPicker: React.FC<Props> = ({ persons, onSelect }) => {
                   <User size={20} />
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-slate-800">{person.name}</p>
+                  <p className="font-semibold text-slate-800">{person.firstName} {person.lastName}</p>
                   <p className="text-xs text-slate-500">{getCoreRoleLabel(person.core_role)}</p>
                 </div>
               </button>

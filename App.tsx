@@ -71,7 +71,7 @@ const App: React.FC = () => {
 
     // 2. Finn endringer for Logg og Varsling
     const roleNames = new Map(state.serviceRoles.map(r => [r.id, r.name]));
-    const personNames = new Map(state.persons.map(p => [p.id, p.name]));
+    const personNames = new Map(state.persons.map(p => [p.id, `${p.firstName} ${p.lastName}`]));
     
     // Enkel differanse-sjekk
     newAssignments.forEach(na => {
@@ -79,7 +79,7 @@ const App: React.FC = () => {
       if (!match) {
         const roleName = roleNames.get(na.service_role_id) || 'Ukjent rolle';
         const personName = personNames.get(na.person_id!) || 'Ingen';
-        const desc = `${roleName} ble satt til ${personName} av ${actor.name}`;
+        const desc = `${roleName} ble satt til ${personName} av ${actor.firstName} ${actor.lastName}`;
         
         logs.push({
           id: crypto.randomUUID(),
@@ -472,10 +472,10 @@ const App: React.FC = () => {
         <div className="p-4 border-t bg-slate-50">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
-              {currentUser.name.charAt(0)}
+              {currentUser.firstName.charAt(0)}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-xs font-semibold truncate">{currentUser.name}</p>
+              <p className="text-xs font-semibold truncate">{currentUser.firstName} {currentUser.lastName}</p>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{currentUser.is_admin ? 'Admin' : 'Frivillig'}</p>
             </div>
             <button onClick={() => setCurrentUser(null)} className="text-slate-400 hover:text-slate-600">

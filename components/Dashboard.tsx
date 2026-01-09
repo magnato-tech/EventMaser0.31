@@ -90,10 +90,69 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
     });
   }, [selectedOccurrenceId, db.programItems]);
 
+  // Beregn alder fra fødselsdato eller fødselsår
+  const calculateAge = (person: Person): number | null => {
+    if (person.birth_date) {
+      const birth = new Date(person.birth_date);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      return age;
+    } else if (person.birth_year) {
+      return new Date().getFullYear() - person.birth_year;
+    }
+    return null;
+  };
+
+  // Demografisk oversikt - aldersgrupper
+  const demographicData = useMemo(() => {
+    const ageGroups = [
+      { label: '60+', min: 60, max: 999 },
+      { label: '40-60', min: 40, max: 59 },
+      { label: '20-40', min: 20, max: 39 },
+      { label: '0-20', min: 0, max: 19 }
+    ];
+
+    return ageGroups.map(group => {
+      // Liste over kjente kvinnenavn (kan utvides)
+      const womenNames = ['lise', 'vigdis', 'beate', 'frida', 'mille', 'thea', 'tiril'];
+      
+      const women = db.persons.filter(p => {
+        const age = calculateAge(p);
+        if (age === null) return false;
+        const firstNameLower = p.firstName.toLowerCase();
+        // Heuristikk: Navn som ender på -a, -e, eller er i listen over kvinnenavn
+        const isWoman = firstNameLower.endsWith('a') || 
+                        firstNameLower.endsWith('e') ||
+                        womenNames.includes(firstNameLower);
+        return age >= group.min && age <= group.max && isWoman;
+      }).length;
+
+      const men = db.persons.filter(p => {
+        const age = calculateAge(p);
+        if (age === null) return false;
+        const firstNameLower = p.firstName.toLowerCase();
+        const isWoman = firstNameLower.endsWith('a') || 
+                        firstNameLower.endsWith('e') ||
+                        womenNames.includes(firstNameLower);
+        return age >= group.min && age <= group.max && !isWoman;
+      }).length;
+
+      return { ...group, women, men, total: women + men };
+    });
+  }, [db.persons]);
+
+  const maxCount = useMemo(() => {
+    return Math.max(...demographicData.map(d => Math.max(d.women, d.men)), 1);
+  }, [demographicData]);
+
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto pb-20 md:pb-8 animate-in fade-in duration-300 text-left">
       <header className="border-b border-slate-200 pb-4">
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Velkommen, {currentUser.name.split(' ')[0]}</h2>
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Velkommen, {currentUser.firstName}</h2>
         <p className="text-sm text-slate-500 font-medium">Operativ oversikt over dine ansvarsområder.</p>
       </header>
 
@@ -189,6 +248,58 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
               })}
             </div>
           </section>
+
+          {/* Demografisk oversikt */}
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/30">
+              <h3 className="text-sm font-bold text-slate-800">Demografisk oversikt</h3>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-pink-400 rounded"></div>
+                  <span className="text-xs font-semibold text-slate-700">Kvinner</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-blue-400 rounded"></div>
+                  <span className="text-xs font-semibold text-slate-700">Menn</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {demographicData.map((group, idx) => (
+                  <div key={group.label} className="flex items-center gap-4">
+                    <div className="w-12 text-xs font-bold text-slate-700 text-right">{group.label}</div>
+                    <div className="flex-1 flex items-center gap-2">
+                      <div className="flex-1 flex items-center justify-end">
+                        {group.women > 0 && (
+                          <div 
+                            className="bg-pink-400 h-8 flex items-center justify-end pr-2 text-white text-xs font-bold rounded-l"
+                            style={{ width: `${(group.women / maxCount) * 100}%`, minWidth: group.women > 0 ? '24px' : '0' }}
+                          >
+                            {group.women}
+                          </div>
+                        )}
+                      </div>
+                      <div className="w-px h-8 bg-slate-300"></div>
+                      <div className="flex-1 flex items-center justify-start">
+                        {group.men > 0 && (
+                          <div 
+                            className="bg-blue-400 h-8 flex items-center justify-start pl-2 text-white text-xs font-bold rounded-r"
+                            style={{ width: `${(group.men / maxCount) * 100}%`, minWidth: group.men > 0 ? '24px' : '0' }}
+                          >
+                            {group.men}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 text-center">
+                <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Antall personer</p>
+              </div>
+            </div>
+          </section>
         </div>
 
         {/* Sidepanel: Frister */}
@@ -268,7 +379,7 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
                              )}
                              {responsiblePerson && (
                                <span className={`text-[9px] font-semibold ${isMyItem ? 'text-indigo-100' : 'text-slate-600'}`}>
-                                 Ansvarlig: {responsiblePerson.name}
+                                 Ansvarlig: {responsiblePerson.firstName} {responsiblePerson.lastName}
                                </span>
                              )}
                            </div>
@@ -349,10 +460,10 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
                             {uniqueCombos.map(({ role, person }, idx) => (
                               <div key={`${role.id}-${person.id}-${idx}`} className="flex items-center gap-3 p-2.5 rounded-lg border bg-white border-slate-200">
                                 <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] bg-indigo-100 text-indigo-700 border border-indigo-200">
-                                  {person.name.charAt(0)}
+                                  {person.firstName.charAt(0)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-bold text-slate-800 truncate">{person.name}</p>
+                                  <p className="font-bold text-slate-800 truncate">{person.firstName} {person.lastName}</p>
                                   <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{role.name}</p>
                                 </div>
                               </div>
@@ -376,9 +487,9 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
                          if (!person) return null;
                          return (
                            <div key={a.id} className={`flex items-center gap-3 p-2.5 rounded-lg border text-sm ${a.person_id === currentUser.id ? 'bg-indigo-50 border-indigo-100' : 'bg-slate-50 border-slate-100'}`}>
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] ${a.person_id === currentUser.id ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>{person.name.charAt(0)}</div>
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] ${a.person_id === currentUser.id ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>{person.firstName.charAt(0)}</div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-bold text-slate-800 truncate">{person.name}</p>
+                                <p className="font-bold text-slate-800 truncate">{person.firstName} {person.lastName}</p>
                                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{role?.name}</p>
                               </div>
                            </div>

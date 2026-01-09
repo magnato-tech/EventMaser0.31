@@ -89,6 +89,26 @@ const CalendarView: React.FC<Props> = ({
     }
   }, [selectedOccId]);
 
+  // Auto-utfyll gruppeleder når team velges
+  useEffect(() => {
+    if (progGroupId && isProgramModalOpen) {
+      const members = db.groupMembers.filter(gm => gm.group_id === progGroupId);
+      if (members.length > 0) {
+        // Først prøv å finne leder
+        const leaderMember = members.find(gm => gm.role === GroupRole.LEADER);
+        if (leaderMember) {
+          setProgPersonId(leaderMember.person_id);
+        } else {
+          // Hvis ingen leder, bruk første medlem
+          setProgPersonId(members[0].person_id);
+        }
+      }
+    } else if (!progGroupId && isProgramModalOpen) {
+      // Hvis team fjernes, nullstill person
+      setProgPersonId('');
+    }
+  }, [progGroupId, isProgramModalOpen, db.groupMembers]);
+
   const calendarDays = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -556,17 +576,17 @@ const CalendarView: React.FC<Props> = ({
                                       <option value="">Tildel person...</option>
                                       {recommended.length > 0 && (
                                         <optgroup label="Anbefalt Team">
-                                          {recommended.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                          {recommended.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
                                         </optgroup>
                                       )}
                                       <optgroup label="Alle Personer">
-                                        {others.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        {others.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
                                       </optgroup>
                                     </select>
                                   ) : person && (
                                     <div className="flex items-center gap-1.5 text-[10px] text-slate-600 font-bold">
-                                      <div className="w-4 h-4 rounded-full bg-indigo-100 flex items-center justify-center text-[8px] text-indigo-700">{person.name.charAt(0)}</div>
-                                      {person.name}
+                                      <div className="w-4 h-4 rounded-full bg-indigo-100 flex items-center justify-center text-[8px] text-indigo-700">{person.firstName.charAt(0)}</div>
+                                      {person.firstName} {person.lastName}
                                     </div>
                                   )}
                                 </div>
@@ -636,7 +656,7 @@ const CalendarView: React.FC<Props> = ({
                                 {!person && <AlertTriangle size={12} className="text-amber-500" />}
                               </div>
                               <p className={`text-sm font-bold leading-tight ${person ? 'text-slate-800' : 'text-slate-300 italic'}`}>
-                                {person?.name || 'Ledig vakt'}
+                                {person ? `${person.firstName} ${person.lastName}` : 'Ledig vakt'}
                               </p>
                               {isAdmin && (
                                 <select 
@@ -647,11 +667,11 @@ const CalendarView: React.FC<Props> = ({
                                   <option value="">Tildel person...</option>
                                   {recommended.length > 0 && (
                                     <optgroup label="Anbefalt Team">
-                                      {recommended.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                      {recommended.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
                                     </optgroup>
                                   )}
                                   <optgroup label="Alle Personer">
-                                    {others.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    {others.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
                                   </optgroup>
                                 </select>
                               )}
@@ -806,15 +826,6 @@ const CalendarView: React.FC<Props> = ({
                     onChange={e => {
                       const groupId = e.target.value;
                       setProgGroupId(groupId);
-                      // Auto-utfyll gruppeleder hvis team velges
-                      if (groupId) {
-                        const leaderMember = db.groupMembers.find(
-                          gm => gm.group_id === groupId && gm.role === GroupRole.LEADER
-                        );
-                        if (leaderMember) {
-                          setProgPersonId(leaderMember.person_id);
-                        }
-                      }
                     }}
                     className="w-full px-2 py-2 border rounded-lg text-[11px] font-medium"
                   >
@@ -831,7 +842,7 @@ const CalendarView: React.FC<Props> = ({
                   className="w-full px-2 py-2 border rounded-lg text-[11px] font-medium"
                 >
                   <option value="">Ingen valgt</option>
-                  {db.persons.filter(p => p.is_active).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  {db.persons.filter(p => p.is_active).map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
                 </select>
               </div>
               <div>

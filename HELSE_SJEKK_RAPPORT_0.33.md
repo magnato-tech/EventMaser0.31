@@ -268,3 +268,4 @@ const generateYearlyWheelTasks = (year: number): Task[] => {
 **Neste sjekk anbefalt:** Etter implementering av kritiske endringer
 
 
+

@@ -43,7 +43,8 @@ export interface GatheringPattern {
 
 export interface Person {
   id: UUID;
-  name: string;
+  firstName: string;
+  lastName: string;
   email?: string;
   phone?: string;
   social_security_number?: string;

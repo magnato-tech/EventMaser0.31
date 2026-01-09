@@ -443,6 +443,8 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const isAdminOverride = formData.get('is_admin') === 'true';
+    const firstName = (formData.get('firstName') as string).trim();
+    const lastName = (formData.get('lastName') as string).trim();
     const email = (formData.get('email') as string)?.trim() || undefined;
     const phone = (formData.get('phone') as string)?.trim() || undefined;
     const birthDate = (formData.get('birth_date') as string)?.trim() || undefined;
@@ -451,7 +453,8 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
     const city = (formData.get('city') as string)?.trim() || undefined;
     const newPerson: Person = { 
       id: crypto.randomUUID(), 
-      name: (formData.get('name') as string).trim(), 
+      firstName,
+      lastName,
       email, 
       phone, 
       birth_date: birthDate,
@@ -472,6 +475,8 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
     if (!editingPerson) return;
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const isAdminOverride = formData.get('is_admin') === 'true';
+    const firstName = (formData.get('firstName') as string).trim();
+    const lastName = (formData.get('lastName') as string).trim();
     const email = (formData.get('email') as string)?.trim() || undefined;
     const phone = (formData.get('phone') as string)?.trim() || undefined;
     const birthDate = (formData.get('birth_date') as string)?.trim() || undefined;
@@ -480,7 +485,8 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
     const city = (formData.get('city') as string)?.trim() || undefined;
     const updatedPerson: Person = { 
       ...editingPerson, 
-      name: (formData.get('name') as string).trim(), 
+      firstName,
+      lastName,
       email, 
       phone, 
       birth_date: birthDate,
@@ -586,14 +592,16 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
     if (isNewPerson && !memberPersonId) {
       try {
         // Først: Opprett personen i personbasen
-        console.log('Oppretter ny person:', memberPersonSearch.trim());
+        const { firstName, lastName } = splitName(memberPersonSearch.trim());
+        console.log('Oppretter ny person:', firstName, lastName);
         const personResponse = await fetch('/api/people', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            name: memberPersonSearch.trim(),
+            firstName,
+            lastName,
             email: newPersonEmail.trim() || undefined,
             phone: newPersonPhone.trim() || undefined,
             birth_year: newPersonBirthYear ? parseInt(newPersonBirthYear) : undefined,
@@ -612,7 +620,8 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
           alert('⚠️ Kunne ikke koble til server. Personen lagres lokalt i nettleseren.');
           newPerson = {
             id: crypto.randomUUID(),
-            name: memberPersonSearch.trim(),
+            firstName,
+            lastName,
             email: newPersonEmail.trim() || undefined,
             phone: newPersonPhone.trim() || undefined,
             birth_year: newPersonBirthYear ? parseInt(newPersonBirthYear) : undefined,
@@ -641,7 +650,8 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         // Fallback: Opprett person lokalt
         const newPerson: Person = {
           id: crypto.randomUUID(),
-          name: memberPersonSearch.trim(),
+          firstName: splitName(memberPersonSearch.trim()).firstName,
+          lastName: splitName(memberPersonSearch.trim()).lastName,
           email: newPersonEmail.trim() || undefined,
           phone: newPersonPhone.trim() || undefined,
           birth_year: newPersonBirthYear ? parseInt(newPersonBirthYear) : undefined,
@@ -987,7 +997,8 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
 
   const filteredPersons = useMemo(() => {
     let filtered = db.persons.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(personSearch.toLowerCase()) ||
+      const fullName = `${p.firstName} ${p.lastName}`;
+      const matchesSearch = fullName.toLowerCase().includes(personSearch.toLowerCase()) ||
                            (p.email && p.email.toLowerCase().includes(personSearch.toLowerCase())) ||
                            (p.phone && p.phone.includes(personSearch));
       
@@ -1019,7 +1030,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         
         switch (sortColumn) {
           case 'name':
-            comparison = a.name.localeCompare(b.name);
+            comparison = `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
             break;
           case 'role':
             // Sjekk rolle (admin > gruppeleder > nestleder > medlem)
@@ -1052,7 +1063,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
       });
     } else {
       // Standard sortering på navn hvis ingen sortering er valgt
-      filtered = filtered.sort((a, b) => a.name.localeCompare(b.name));
+      filtered = filtered.sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
     }
     
     return filtered;
@@ -1087,7 +1098,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
             <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button onClick={() => setSelectedPersonId(null)} className="p-2 bg-white rounded-lg shadow-sm border border-slate-200 hover:bg-slate-50 transition-all text-slate-600"><ArrowLeft size={18}/></button>
-                <h3 className="text-lg font-bold text-slate-900">Medlemskort: {selectedPerson.name}</h3>
+                <h3 className="text-lg font-bold text-slate-900">Medlemskort: {selectedPerson.firstName} {selectedPerson.lastName}</h3>
               </div>
               <div className="flex items-center gap-2">
                 {isAdmin && (
@@ -1116,10 +1127,10 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold text-2xl border border-slate-200">
-                      {selectedPerson.name.charAt(0)}
+                      {selectedPerson.firstName.charAt(0)}
                     </div>
                     <div>
-                      <h4 className="text-lg font-bold text-slate-900">{selectedPerson.name}</h4>
+                      <h4 className="text-lg font-bold text-slate-900">{selectedPerson.firstName} {selectedPerson.lastName}</h4>
                       {(() => {
                         // Sjekk om personen er gruppeleder eller nestleder i noen grupper
                         const groupMemberships = db.groupMembers.filter(gm => gm.person_id === selectedPersonId);
@@ -1621,7 +1632,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   
                   return (
                     <tr key={person.id} onClick={() => setSelectedPersonId(person.id)} className="group hover:bg-slate-50 transition-colors cursor-pointer">
-                      <td className="py-3 px-6 font-bold text-sm text-slate-800">{person.name}</td>
+                      <td className="py-3 px-6 font-bold text-sm text-slate-800">{person.firstName} {person.lastName}</td>
                       <td className="py-3 px-4 text-xs text-slate-500">{formattedBirthDate || '–'}</td>
                       <td className="py-3 px-4">
                         <span className={`px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-tight ${roleColorClass}`}>
@@ -1716,8 +1727,14 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredGroups.map(group => {
               const members = db.groupMembers.filter(gm => gm.group_id === group.id);
-              const leaders = members.filter(m => m.role === GroupRole.LEADER).map(m => db.persons.find(p => p.id === m.person_id)?.name).filter(Boolean);
-              const deputyLeaders = members.filter(m => m.role === GroupRole.DEPUTY_LEADER).map(m => db.persons.find(p => p.id === m.person_id)?.name).filter(Boolean);
+              const leaders = members.filter(m => m.role === GroupRole.LEADER).map(m => {
+                const person = db.persons.find(p => p.id === m.person_id);
+                return person ? `${person.firstName} ${person.lastName}` : null;
+              }).filter(Boolean);
+              const deputyLeaders = members.filter(m => m.role === GroupRole.DEPUTY_LEADER).map(m => {
+                const person = db.persons.find(p => p.id === m.person_id);
+                return person ? `${person.firstName} ${person.lastName}` : null;
+              }).filter(Boolean);
               return (
                 <button 
                   key={group.id} 
@@ -1846,7 +1863,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                       
                       // Sjekk om navnet matcher eksisterende person
                       const matchingPerson = db.persons.find(p => 
-                        p.name.toLowerCase() === searchValue.toLowerCase().trim()
+                        `${p.firstName} ${p.lastName}`.toLowerCase() === searchValue.toLowerCase().trim()
                       );
                       
                       if (matchingPerson) {
@@ -1872,8 +1889,9 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                       .filter(p => {
                         const isAlreadyMember = (db.familyMembers || [])
                           .some(fm => fm.family_id === selectedFamilyForMember && fm.person_id === p.id);
-                        const matchesSearch = p.name.toLowerCase().includes(memberPersonSearch.toLowerCase());
-                        const exactMatch = p.name.toLowerCase() === memberPersonSearch.toLowerCase().trim();
+                        const fullName = `${p.firstName} ${p.lastName}`;
+                        const matchesSearch = fullName.toLowerCase().includes(memberPersonSearch.toLowerCase());
+                        const exactMatch = fullName.toLowerCase() === memberPersonSearch.toLowerCase().trim();
                         // Vis ikke eksakt match (den er allerede valgt)
                         return matchesSearch && !exactMatch && !isAlreadyMember;
                       })
@@ -1883,20 +1901,21 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                           type="button"
                           onClick={() => {
                             setMemberPersonId(person.id);
-                            setMemberPersonSearch(person.name);
+                            setMemberPersonSearch(`${person.firstName} ${person.lastName}`);
                             setIsNewPerson(false);
                           }}
                           className="w-full text-left px-3 py-2 hover:bg-indigo-50 transition-colors border-b border-slate-100 last:border-b-0"
                         >
-                          <p className="text-sm font-semibold text-slate-800">{person.name}</p>
+                          <p className="text-sm font-semibold text-slate-800">{person.firstName} {person.lastName}</p>
                           <p className="text-xs text-slate-500">{person.email}</p>
                         </button>
                       ))}
                     {db.persons.filter(p => {
                       const isAlreadyMember = (db.familyMembers || [])
                         .some(fm => fm.family_id === selectedFamilyForMember && fm.person_id === p.id);
-                      const exactMatch = p.name.toLowerCase() === memberPersonSearch.toLowerCase().trim();
-                      return p.name.toLowerCase().includes(memberPersonSearch.toLowerCase()) && !exactMatch && !isAlreadyMember;
+                      const fullName = `${p.firstName} ${p.lastName}`;
+                      const exactMatch = fullName.toLowerCase() === memberPersonSearch.toLowerCase().trim();
+                      return fullName.toLowerCase().includes(memberPersonSearch.toLowerCase()) && !exactMatch && !isAlreadyMember;
                     }).length === 0 && (
                       <div className="px-3 py-2 text-xs text-slate-500 italic">
                         Ingen match funnet. Fortsett å skrive for å opprette ny person.
@@ -1908,7 +1927,10 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 {/* Valgt eksisterende person */}
                 {memberPersonId && !isNewPerson && (
                   <div className="mt-2 p-3 bg-indigo-50 rounded-md border border-indigo-200">
-                    <p className="text-xs font-bold text-indigo-700 mb-1">Valgt: {db.persons.find(p => p.id === memberPersonId)?.name}</p>
+                    <p className="text-xs font-bold text-indigo-700 mb-1">Valgt: {(() => {
+                      const person = db.persons.find(p => p.id === memberPersonId);
+                      return person ? `${person.firstName} ${person.lastName}` : '';
+                    })()}</p>
                     <p className="text-xs text-indigo-600">{db.persons.find(p => p.id === memberPersonId)?.email}</p>
                   </div>
                 )}
@@ -2082,14 +2104,24 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
             </div>
             <form onSubmit={handleCreatePerson} className="flex-1 overflow-y-auto p-6 space-y-4">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Navn *</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Fornavn *</label>
                 <input
                   autoFocus
                   required
-                  name="name"
+                  name="firstName"
                   type="text"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
-                  placeholder="Fullt navn"
+                  placeholder="Fornavn"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Etternavn *</label>
+                <input
+                  required
+                  name="lastName"
+                  type="text"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder="Etternavn"
                 />
               </div>
               <div>
@@ -2180,13 +2212,23 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
             </div>
             <form onSubmit={handleUpdatePerson} className="flex-1 overflow-y-auto p-6 space-y-4">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Navn *</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Fornavn *</label>
                 <input
                   autoFocus
                   required
-                  name="name"
+                  name="firstName"
                   type="text"
-                  defaultValue={editingPerson.name}
+                  defaultValue={editingPerson.firstName}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Etternavn *</label>
+                <input
+                  required
+                  name="lastName"
+                  type="text"
+                  defaultValue={editingPerson.lastName}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
                 />
               </div>
@@ -2372,11 +2414,11 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   {parents.length > 0 ? (
                     <div className="text-xl font-bold text-slate-900">
                       {(() => {
-                        const familyLastName = parents[0] ? splitName(parents[0].person.name).lastName : '';
+                        const familyLastName = parents[0] ? parents[0].person.lastName : '';
                         return (
                           <>
                             {parents.map(({ person }, index) => {
-                              const { firstName } = splitName(person.name);
+                              const firstName = person.firstName;
                               return (
                                 <React.Fragment key={person.id}>
                                   <span className="text-slate-900">
@@ -2520,7 +2562,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                                 <Heart size={18} className="text-rose-500" />
                               )}
                               <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                                {person.name}
+                                {person.firstName} {person.lastName}
                               </h4>
                             </div>
                             <span className="text-[10px] font-bold text-slate-400 uppercase">
@@ -2575,7 +2617,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                               <div className="flex items-center gap-2 flex-1">
                                 <Baby size={16} className="text-indigo-400" />
                                 <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                                  {person.name}
+                                  {person.firstName} {person.lastName}
                                 </h4>
                               </div>
                             </div>
@@ -2778,7 +2820,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   >
                     <option value="">Ingen leder valgt</option>
                     {db.persons.map(person => (
-                      <option key={person.id} value={person.id}>{person.name}</option>
+                      <option key={person.id} value={person.id}>{person.firstName} {person.lastName}</option>
                     ))}
                   </select>
                 </div>
@@ -2800,7 +2842,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                         <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
                           {db.persons
                             .filter(p => 
-                              p.name.toLowerCase().includes(newGroupMemberSearch.toLowerCase()) &&
+                              `${p.firstName} ${p.lastName}`.toLowerCase().includes(newGroupMemberSearch.toLowerCase()) &&
                               !newGroupMemberIds.includes(p.id) &&
                               p.id !== newGroupLeaderId
                             )
@@ -2816,13 +2858,13 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                                 className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3"
                               >
                                 <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 font-bold text-xs">
-                                  {person.name.charAt(0)}
+                                  {person.firstName.charAt(0)}
                                 </div>
-                                <span className="text-sm text-slate-900">{person.name}</span>
+                                <span className="text-sm text-slate-900">{person.firstName} {person.lastName}</span>
                               </button>
                             ))}
                           {db.persons.filter(p => 
-                            p.name.toLowerCase().includes(newGroupMemberSearch.toLowerCase()) &&
+                            `${p.firstName} ${p.lastName}`.toLowerCase().includes(newGroupMemberSearch.toLowerCase()) &&
                             !newGroupMemberIds.includes(p.id) &&
                             p.id !== newGroupLeaderId
                           ).length === 0 && (
@@ -2845,7 +2887,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                               key={personId}
                               className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-md text-sm"
                             >
-                              <span className="text-indigo-900 font-medium">{person.name}</span>
+                              <span className="text-indigo-900 font-medium">{person.firstName} {person.lastName}</span>
                               <button
                                 type="button"
                                 onClick={() => setNewGroupMemberIds(newGroupMemberIds.filter(id => id !== personId))}
@@ -2952,10 +2994,10 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                         className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 hover:border-indigo-400 border border-transparent transition-all cursor-pointer group"
                       >
                         <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold">
-                          {leaderPerson.name.charAt(0)}
+                          {leaderPerson.firstName.charAt(0)}
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{leaderPerson.name}</p>
+                          <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{leaderPerson.firstName} {leaderPerson.lastName}</p>
                           {leaderPerson.email && <p className="text-xs text-slate-500">{leaderPerson.email}</p>}
                           {leaderPerson.phone && <p className="text-xs text-slate-500">{leaderPerson.phone}</p>}
                         </div>
@@ -2990,10 +3032,10 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                             className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 hover:border-blue-400 transition-all cursor-pointer group"
                           >
                             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
-                              {person.name.charAt(0)}
+                              {person.firstName.charAt(0)}
                             </div>
                             <div className="flex-1">
-                              <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{person.name}</p>
+                              <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{person.firstName} {person.lastName}</p>
                               {person.email && <p className="text-xs text-slate-500">{person.email}</p>}
                               {person.phone && <p className="text-xs text-slate-500">{person.phone}</p>}
                             </div>
@@ -3030,10 +3072,10 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                             className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 hover:border-indigo-400 border border-transparent transition-all cursor-pointer group"
                           >
                             <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 font-bold text-xs">
-                              {person.name.charAt(0)}
+                              {person.firstName.charAt(0)}
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">{person.name}</p>
+                              <p className="text-sm font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">{person.firstName} {person.lastName}</p>
                               {person.email && <p className="text-xs text-slate-500">{person.email}</p>}
                               {person.phone && <p className="text-xs text-slate-500">{person.phone}</p>}
                             </div>
@@ -3195,7 +3237,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
                       {db.persons
                         .filter(p => 
-                          p.name.toLowerCase().includes(memberSearchForGroup.toLowerCase()) &&
+                          `${p.firstName} ${p.lastName}`.toLowerCase().includes(memberSearchForGroup.toLowerCase()) &&
                           !db.groupMembers.some(gm => gm.group_id === manageGroupId && gm.person_id === p.id)
                         )
                         .map(person => (
@@ -3209,9 +3251,9 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                             className="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3"
                           >
                             <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 font-bold text-xs">
-                              {person.name.charAt(0)}
+                              {person.firstName.charAt(0)}
                             </div>
-                            <span className="text-sm text-slate-900">{person.name}</span>
+                            <span className="text-sm text-slate-900">{person.firstName} {person.lastName}</span>
                           </button>
                         ))}
                     </div>
@@ -3257,10 +3299,10 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                               isDeputyLeader ? 'bg-blue-200 text-blue-800' : 
                               'bg-slate-200 text-slate-600'
                             }`}>
-                              {person.name.charAt(0)}
+                              {person.firstName.charAt(0)}
                             </div>
                             <div className="flex-1">
-                              <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{person.name}</p>
+                              <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{person.firstName} {person.lastName}</p>
                               {person.email && <p className="text-xs text-slate-500">{person.email}</p>}
                               {person.phone && <p className="text-xs text-slate-500">{person.phone}</p>}
                             </div>
