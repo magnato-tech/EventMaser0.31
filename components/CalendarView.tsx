@@ -283,8 +283,8 @@ const CalendarView: React.FC<Props> = ({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="bg-slate-200 p-1 rounded-lg flex">
-            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}><ListIcon size={16} /></button>
-            <button onClick={() => setViewMode('calendar')} className={`p-1.5 rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}><LayoutGrid size={16} /></button>
+            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-primary-600' : 'text-slate-500'}`}><ListIcon size={16} /></button>
+            <button onClick={() => setViewMode('calendar')} className={`p-1.5 rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white shadow-sm text-primary-600' : 'text-slate-500'}`}><LayoutGrid size={16} /></button>
           </div>
         </div>
       </div>
@@ -299,7 +299,7 @@ const CalendarView: React.FC<Props> = ({
                 setNewOccurrenceTemplateId(db.eventTemplates[0]?.id || '');
                 setIsCreateOccurrenceModalOpen(true);
               }}
-              className="w-full p-4 rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 hover:bg-indigo-100 hover:border-indigo-400 transition-all flex items-center justify-center gap-2 text-indigo-700 font-bold"
+              className="w-full p-4 rounded-xl border-2 border-dashed border-primary-300 bg-primary-50/50 hover:bg-primary-100 hover:border-primary-400 transition-all flex items-center justify-center gap-2 text-primary-700 font-bold"
             >
               <Plus size={18} />
               Ny Arrangement
@@ -307,13 +307,13 @@ const CalendarView: React.FC<Props> = ({
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-left">
             {occurrences.map(occ => (
-              <div key={occ.id} className={`relative text-left p-4 rounded-xl border transition-all group ${selectedOccId === occ.id ? 'bg-white border-indigo-600 shadow-sm' : 'bg-white border-slate-100 hover:border-indigo-200'}`}>
+              <div key={occ.id} className={`relative text-left p-4 rounded-xl border transition-all group ${selectedOccId === occ.id ? 'bg-white border-primary-600 shadow-sm' : 'bg-white border-slate-100 hover:border-primary-200'}`}>
                 <button 
                   onClick={() => { setSelectedOccId(occ.id); setActiveTab('program'); }} 
                   className="w-full text-left"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">{new Intl.DateTimeFormat('no-NO', { weekday: 'short' }).format(parseLocalDate(occ.date))}</span>
+                    <span className="text-[10px] font-bold text-primary-500 uppercase tracking-widest">{new Intl.DateTimeFormat('no-NO', { weekday: 'short' }).format(parseLocalDate(occ.date))}</span>
                     <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-bold ${occ.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>{occ.status}</span>
                   </div>
                   <h3 className="text-base font-bold text-slate-800 mb-0.5">{occ.title_override || getTemplateTitle(occ.template_id)}</h3>
@@ -349,7 +349,7 @@ const CalendarView: React.FC<Props> = ({
             <h3 className="text-lg font-bold text-slate-800">{new Intl.DateTimeFormat('no-NO', { month: 'long', year: 'numeric' }).format(currentDate)}</h3>
             <div className="flex gap-1">
               <button onClick={prevMonth} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600"><ChevronLeft size={18} /></button>
-              <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600">I dag</button>
+              <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-primary-600">I dag</button>
               <button onClick={nextMonth} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600"><ChevronRight size={18} /></button>
             </div>
           </div>
@@ -361,7 +361,7 @@ const CalendarView: React.FC<Props> = ({
               return (
                 <div key={i} className={`min-h-[100px] p-1.5 border-b border-r last:border-r-0 group transition-colors ${day.isCurrentMonth ? 'bg-white' : 'bg-slate-50/50 text-slate-300'}`}>
                   <div className="flex justify-between items-center mb-1">
-                    <span className={`text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full ${isToday ? 'bg-indigo-600 text-white' : ''}`}>{day.date.getDate()}</span>
+                    <span className={`text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full ${isToday ? 'bg-primary-600 text-white' : ''}`}>{day.date.getDate()}</span>
                     {isAdmin && day.isCurrentMonth && (
                       <button 
                         onClick={(e) => {
@@ -373,7 +373,7 @@ const CalendarView: React.FC<Props> = ({
                           setNewOccurrenceTemplateId(db.eventTemplates[0]?.id || '');
                           setIsCreateOccurrenceModalOpen(true);
                         }} 
-                        className="opacity-0 group-hover:opacity-100 p-0.5 text-indigo-400 hover:text-indigo-600"
+                        className="opacity-0 group-hover:opacity-100 p-0.5 text-primary-400 hover:text-primary-600"
                       >
                         <Plus size={12} />
                       </button>
@@ -387,7 +387,7 @@ const CalendarView: React.FC<Props> = ({
                       >
                         <button 
                           onClick={() => { setSelectedOccId(occ.id); setActiveTab('program'); }} 
-                          className={`w-full text-left px-1.5 py-0.5 rounded text-[9px] font-bold border truncate transition-all ${selectedOccId === occ.id ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100'}`}
+                          className={`w-full text-left px-1.5 py-0.5 rounded text-[9px] font-bold border truncate transition-all ${selectedOccId === occ.id ? 'bg-primary-600 text-white border-primary-700' : 'bg-primary-50 text-primary-700 hover:bg-primary-100 border-primary-100'}`}
                         >
                           {occ.title_override || getTemplateTitle(occ.template_id)}
                           {occ.time && <span className="ml-1 opacity-75">{occ.time}</span>}
@@ -421,7 +421,7 @@ const CalendarView: React.FC<Props> = ({
           <div className="px-6 py-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
             <div className="text-left flex-1">
               <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-bold uppercase rounded">Planlegging</span>
+                <span className="px-1.5 py-0.5 bg-primary-100 text-primary-700 text-[9px] font-bold uppercase rounded">Planlegging</span>
                 {isAdmin ? (
                   <div className="flex items-center gap-2">
                     <input
@@ -431,7 +431,7 @@ const CalendarView: React.FC<Props> = ({
                         setEditOccurrenceDate(e.target.value);
                         onUpdateOccurrence(selectedOcc.id, { date: e.target.value });
                       }}
-                      className="text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none"
+                      className="text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-primary-500 outline-none"
                     />
                     <input
                       type="time"
@@ -440,7 +440,7 @@ const CalendarView: React.FC<Props> = ({
                         setEditOccurrenceTime(e.target.value);
                         onUpdateOccurrence(selectedOcc.id, { time: e.target.value || undefined });
                       }}
-                      className="text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none"
+                      className="text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-primary-500 outline-none"
                     />
                   </div>
                 ) : (
@@ -462,7 +462,7 @@ const CalendarView: React.FC<Props> = ({
                       onUpdateOccurrence(selectedOcc.id, { theme: e.target.value.trim() || undefined });
                     }}
                     placeholder="Tema for dagen..."
-                    className="text-sm text-slate-600 italic w-full px-3 py-1.5 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    className="text-sm text-slate-600 italic w-full px-3 py-1.5 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none"
                   />
                 </div>
               ) : selectedOcc.theme ? (
@@ -496,9 +496,9 @@ const CalendarView: React.FC<Props> = ({
           </div>
           
           <div className="flex bg-slate-50 border-b shrink-0 px-6">
-            <button onClick={() => setActiveTab('program')} className={`px-6 py-3 text-xs font-bold border-b-2 transition-all ${activeTab === 'program' ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>1. Kjøreplan</button>
-            <button onClick={() => setActiveTab('staff')} className={`px-6 py-3 text-xs font-bold border-b-2 transition-all ${activeTab === 'staff' ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>2. Bemanningsliste</button>
-            <button onClick={() => setActiveTab('history')} className={`px-6 py-3 text-xs font-bold border-b-2 transition-all ${activeTab === 'history' ? 'border-indigo-600 text-indigo-700 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>3. Endringslogg</button>
+            <button onClick={() => setActiveTab('program')} className={`px-6 py-3 text-xs font-bold border-b-2 transition-all ${activeTab === 'program' ? 'border-primary-600 text-primary-700 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>1. Kjøreplan</button>
+            <button onClick={() => setActiveTab('staff')} className={`px-6 py-3 text-xs font-bold border-b-2 transition-all ${activeTab === 'staff' ? 'border-primary-600 text-primary-700 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>2. Bemanningsliste</button>
+            <button onClick={() => setActiveTab('history')} className={`px-6 py-3 text-xs font-bold border-b-2 transition-all ${activeTab === 'history' ? 'border-primary-600 text-primary-700 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>3. Endringslogg</button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 bg-white">
@@ -508,7 +508,7 @@ const CalendarView: React.FC<Props> = ({
                   <div className="flex justify-between items-center border-b pb-3 border-slate-100">
                     <h2 className="text-base font-bold text-slate-800 uppercase tracking-tight">Programoversikt</h2>
                     {isAdmin && (
-                      <button onClick={handleOpenAddModal} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-bold shadow hover:bg-indigo-700 transition-all flex items-center gap-1.5">
+                      <button onClick={handleOpenAddModal} className="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-[11px] font-bold shadow hover:bg-primary-700 transition-all flex items-center gap-1.5">
                         <Plus size={14} /> Ny Aktivitet
                       </button>
                     )}
@@ -531,7 +531,7 @@ const CalendarView: React.FC<Props> = ({
                           onDragStart={() => handleDragStart(idx)}
                           onDragOver={(e) => handleDragOver(e, idx)}
                           onDragEnd={handleDragEnd}
-                          className={`p-3 bg-white border rounded-xl transition-all text-left group flex items-center gap-4 ${isDragged ? 'opacity-30' : 'opacity-100'} ${isOver ? 'border-indigo-500 bg-indigo-50/30' : 'border-slate-100 hover:border-indigo-200'}`}
+                          className={`p-3 bg-white border rounded-xl transition-all text-left group flex items-center gap-4 ${isDragged ? 'opacity-30' : 'opacity-100'} ${isOver ? 'border-primary-500 bg-primary-50/30' : 'border-slate-100 hover:border-primary-200'}`}
                         >
                           {isAdmin && (
                             <div className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-500">
@@ -541,7 +541,7 @@ const CalendarView: React.FC<Props> = ({
                           <div className="flex items-center gap-4 flex-1">
                             {item.duration_minutes > 0 && (
                               <div className="flex flex-col items-center shrink-0 w-14 text-center border-r pr-4">
-                                <span className="text-xs font-bold text-indigo-600 leading-none mb-1">{item.formattedTime}</span>
+                                <span className="text-xs font-bold text-primary-600 leading-none mb-1">{item.formattedTime}</span>
                                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{item.duration_minutes}m</span>
                               </div>
                             )}
@@ -550,7 +550,7 @@ const CalendarView: React.FC<Props> = ({
                                 <h5 className="font-bold text-slate-800 text-sm truncate mr-2">{item.title}</h5>
                                 {isAdmin && (
                                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                    <button onClick={() => handleOpenEditModal(item)} className="p-1 text-slate-400 hover:text-indigo-600">
+                                    <button onClick={() => handleOpenEditModal(item)} className="p-1 text-slate-400 hover:text-primary-600">
                                       <Edit2 size={14}/>
                                     </button>
                                     <button onClick={() => onDeleteProgramItem(item.id)} className="p-1 text-slate-400 hover:text-red-500">
@@ -563,13 +563,13 @@ const CalendarView: React.FC<Props> = ({
                                 <p className="text-xs text-slate-600 mt-1 mb-1.5 italic">{item.description}</p>
                               )}
                               <div className="flex items-center gap-3 mt-1">
-                                {role && <span className="text-[9px] text-indigo-600 font-bold uppercase tracking-wider bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 flex items-center gap-1"><Library size={10}/> {role.name}</span>}
+                                {role && <span className="text-[9px] text-primary-600 font-bold uppercase tracking-wider bg-primary-50 px-1.5 py-0.5 rounded border border-primary-100 flex items-center gap-1"><Library size={10}/> {role.name}</span>}
                                 {group && <span className="text-[9px] text-teal-600 font-bold uppercase tracking-wider bg-teal-50 px-1.5 py-0.5 rounded border border-teal-100 flex items-center gap-1"><Users size={10}/> {group.name}</span>}
                                 
                                 <div className="ml-auto min-w-[180px]">
                                   {isAdmin ? (
                                     <select 
-                                      className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-[10px] outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                                      className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-[10px] outline-none focus:ring-2 focus:ring-primary-500 font-medium"
                                       value={item.person_id || ''}
                                       onChange={(e) => onUpdateProgramItem(item.id, { person_id: e.target.value || null })}
                                     >
@@ -585,7 +585,7 @@ const CalendarView: React.FC<Props> = ({
                                     </select>
                                   ) : person && (
                                     <div className="flex items-center gap-1.5 text-[10px] text-slate-600 font-bold">
-                                      <div className="w-4 h-4 rounded-full bg-indigo-100 flex items-center justify-center text-[8px] text-indigo-700">{person.firstName.charAt(0)}</div>
+                                      <div className="w-4 h-4 rounded-full bg-primary-100 flex items-center justify-center text-[8px] text-primary-700">{person.firstName.charAt(0)}</div>
                                       {person.firstName} {person.lastName}
                                     </div>
                                   )}
@@ -617,7 +617,7 @@ const CalendarView: React.FC<Props> = ({
                     <div className="flex justify-between items-center mb-3">
                       <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Bemanningsoversikt</h4>
                       {isAdmin && (
-                        <button onClick={() => setIsAddRoleModalOpen(true)} className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 hover:text-indigo-700">
+                        <button onClick={() => setIsAddRoleModalOpen(true)} className="flex items-center gap-1.5 text-[10px] font-bold text-primary-600 hover:text-primary-700">
                           <Plus size={12} /> Legg til ekstra vakt
                         </button>
                       )}
@@ -635,7 +635,7 @@ const CalendarView: React.FC<Props> = ({
                             <div key={assign.id} className={`p-3 bg-white border rounded-xl shadow-sm flex flex-col gap-2 transition-all ${person ? 'border-slate-100' : 'border-amber-100 bg-amber-50/20'}`}>
                               <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-2">
-                                  <Library size={12} className="text-indigo-400" />
+                                  <Library size={12} className="text-primary-400" />
                                   <div className="flex items-center gap-1.5">
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">
                                       {role?.name} {assign.display_order ? `(${assign.display_order})` : ''}
@@ -643,7 +643,7 @@ const CalendarView: React.FC<Props> = ({
                                     {role && (
                                       <button 
                                         onClick={() => setRoleInstructionsId(role.id)} 
-                                        className="text-slate-300 hover:text-indigo-600 transition-colors"
+                                        className="text-slate-300 hover:text-primary-600 transition-colors"
                                         title="Se instruks"
                                       >
                                         <div className="w-3.5 h-3.5 rounded-full border border-current flex items-center justify-center">
@@ -660,7 +660,7 @@ const CalendarView: React.FC<Props> = ({
                               </p>
                               {isAdmin && (
                                 <select 
-                                  className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 mt-1" 
+                                  className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] outline-none focus:ring-2 focus:ring-primary-500 font-bold text-slate-700 mt-1" 
                                   value={assign.person_id || ''} 
                                   onChange={(e) => onUpdateAssignment(assign.id, e.target.value || null)}
                                 >
@@ -718,7 +718,7 @@ const CalendarView: React.FC<Props> = ({
           </div>
 
           <div className="px-6 py-4 bg-slate-900 border-t shrink-0 flex justify-end items-center text-white">
-            <button onClick={() => setSelectedOccId(null)} className="px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg flex items-center gap-2">
+            <button onClick={() => setSelectedOccId(null)} className="px-8 py-2.5 bg-primary-600 text-white rounded-xl font-bold text-sm shadow-lg flex items-center gap-2">
               <CheckCircle2 size={16} /> Ferdig planlagt
             </button>
           </div>
@@ -729,7 +729,7 @@ const CalendarView: React.FC<Props> = ({
       {roleInstructionsId && instructionRole && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="relative bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 text-left">
-            <div className="p-4 bg-indigo-700 text-white flex justify-between items-center">
+            <div className="p-4 bg-primary-700 text-white flex justify-between items-center">
               <div className="flex items-center gap-2"><Info size={18} /><h3 className="text-sm font-bold">Instruks: {instructionRole.name}</h3></div>
               <button onClick={() => setRoleInstructionsId(null)}><X size={18} /></button>
             </div>
@@ -737,7 +737,7 @@ const CalendarView: React.FC<Props> = ({
               <div className="space-y-2.5">
                 {instructionRole.default_instructions.map((task, i) => (
                   <div key={i} className="flex gap-3 items-start">
-                    <div className="mt-1 w-4 h-4 rounded-full border-2 border-indigo-200 flex-shrink-0" />
+                    <div className="mt-1 w-4 h-4 rounded-full border-2 border-primary-200 flex-shrink-0" />
                     <p className="text-slate-600 text-xs leading-relaxed font-medium">{task}</p>
                   </div>
                 ))}
@@ -752,12 +752,12 @@ const CalendarView: React.FC<Props> = ({
       {isAddRoleModalOpen && selectedOcc && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
           <div className="relative bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden text-left animate-in zoom-in-95">
-            <div className="p-4 bg-indigo-700 text-white flex justify-between items-center"><h3 className="text-sm font-bold uppercase tracking-tight">Velg rolle fra katalog</h3><button onClick={() => setIsAddRoleModalOpen(false)}><X size={18}/></button></div>
+            <div className="p-4 bg-primary-700 text-white flex justify-between items-center"><h3 className="text-sm font-bold uppercase tracking-tight">Velg rolle fra katalog</h3><button onClick={() => setIsAddRoleModalOpen(false)}><X size={18}/></button></div>
             <div className="p-4 space-y-2 max-h-[60vh] overflow-y-auto">
               {db.serviceRoles.map(sr => (
-                <button key={sr.id} onClick={() => { onAddAssignment(selectedOcc.id, sr.id); setIsAddRoleModalOpen(false); }} className="w-full p-3 rounded-lg border text-left flex justify-between items-center hover:border-indigo-500 hover:bg-indigo-50 transition-all">
+                <button key={sr.id} onClick={() => { onAddAssignment(selectedOcc.id, sr.id); setIsAddRoleModalOpen(false); }} className="w-full p-3 rounded-lg border text-left flex justify-between items-center hover:border-primary-500 hover:bg-primary-50 transition-all">
                   <div className="font-bold text-slate-800 text-xs">{sr.name}</div>
-                  <Plus size={14} className="text-indigo-400" />
+                  <Plus size={14} className="text-primary-400" />
                 </button>
               ))}
             </div>
@@ -769,7 +769,7 @@ const CalendarView: React.FC<Props> = ({
       {isProgramModalOpen && selectedOcc && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
           <div className="relative bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden text-left animate-in zoom-in-95">
-            <div className="p-4 bg-indigo-700 text-white flex justify-between items-center">
+            <div className="p-4 bg-primary-700 text-white flex justify-between items-center">
               <h3 className="text-sm font-bold">{editingProgramItem ? 'Rediger Aktivitet' : 'Ny Aktivitet'}</h3>
               <button onClick={() => { 
                 setIsProgramModalOpen(false); 
@@ -855,7 +855,7 @@ const CalendarView: React.FC<Props> = ({
                   rows={3}
                 />
               </div>
-              <button type="submit" className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-md hover:bg-indigo-700 transition-all">
+              <button type="submit" className="w-full py-2.5 bg-primary-600 text-white rounded-xl font-bold text-xs shadow-md hover:bg-primary-700 transition-all">
                 {editingProgramItem ? 'Oppdater' : 'Lagre'}
               </button>
             </form>
@@ -867,7 +867,7 @@ const CalendarView: React.FC<Props> = ({
       {isCreateOccurrenceModalOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
           <div className="relative bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden text-left animate-in zoom-in-95">
-            <div className="p-4 bg-indigo-700 text-white flex justify-between items-center">
+            <div className="p-4 bg-primary-700 text-white flex justify-between items-center">
               <h3 className="text-sm font-bold uppercase tracking-tight">Ny Arrangement</h3>
               <button onClick={() => {
                 setIsCreateOccurrenceModalOpen(false);
@@ -894,7 +894,7 @@ const CalendarView: React.FC<Props> = ({
                   required
                   value={newOccurrenceTemplateId}
                   onChange={(e) => setNewOccurrenceTemplateId(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                 >
                   <option value="">Velg mal...</option>
                   {db.eventTemplates.map(template => (
@@ -909,7 +909,7 @@ const CalendarView: React.FC<Props> = ({
                   type="date"
                   value={newOccurrenceDate}
                   onChange={(e) => setNewOccurrenceDate(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                 />
               </div>
               <div>
@@ -918,7 +918,7 @@ const CalendarView: React.FC<Props> = ({
                   type="time"
                   value={newOccurrenceTime}
                   onChange={(e) => setNewOccurrenceTime(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                 />
               </div>
               <div className="flex gap-2 pt-2">
@@ -936,7 +936,7 @@ const CalendarView: React.FC<Props> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-all"
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-bold hover:bg-primary-700 transition-all"
                 >
                   Opprett
                 </button>

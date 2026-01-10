@@ -6,9 +6,10 @@ import { Search, User } from 'lucide-react';
 interface Props {
   persons: Person[];
   onSelect: (person: Person) => void;
+  organizationName?: string;
 }
 
-const IdentityPicker: React.FC<Props> = ({ persons, onSelect }) => {
+const IdentityPicker: React.FC<Props> = ({ persons, onSelect, organizationName }) => {
   const [search, setSearch] = useState('');
 
   const filtered = persons.filter(p => 
@@ -26,11 +27,11 @@ const IdentityPicker: React.FC<Props> = ({ persons, onSelect }) => {
   };
 
   return (
-    <div className="min-h-screen bg-indigo-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-primary-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
-        <div className="bg-indigo-700 p-8 text-white text-center">
+        <div className="bg-primary-700 p-8 text-white text-center">
           <h1 className="text-3xl font-bold mb-2">Velkommen</h1>
-          <p className="text-indigo-100">Velg din identitet for å fortsette til EventMaster LMK.</p>
+          <p className="text-primary-100">Velg din identitet for å fortsette til {organizationName || 'EventMaster LMK'}.</p>
         </div>
         
         <div className="p-6">
@@ -41,7 +42,7 @@ const IdentityPicker: React.FC<Props> = ({ persons, onSelect }) => {
               placeholder="Søk på navn..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all"
             />
           </div>
 
@@ -50,9 +51,9 @@ const IdentityPicker: React.FC<Props> = ({ persons, onSelect }) => {
               <button 
                 key={person.id}
                 onClick={() => onSelect(person)}
-                className="w-full flex items-center gap-4 p-4 rounded-xl border border-transparent hover:border-indigo-100 hover:bg-indigo-50 transition-all group"
+                className="w-full flex items-center gap-4 p-4 rounded-xl border border-transparent hover:border-primary-100 hover:bg-primary-50 transition-all group"
               >
-                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-indigo-200 group-hover:text-indigo-700 transition-colors">
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-primary-200 group-hover:text-primary-700 transition-colors">
                   <User size={20} />
                 </div>
                 <div className="text-left">

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AppState, Person, GroupCategory, EventOccurrence, ProgramItem, Assignment, UUID, GroupRole, Task, NoticeMessage, CoreRole, ChangeLog, OccurrenceStatus } from './types';
 import { getDB, saveDB, performBulkCopy } from './db';
+import { applyBrandSettings, DEFAULT_BRAND_SETTINGS } from './utils/brandUtils';
 
 // Hjelpefunksjon for å parse datoer i lokal tid (Berlin time)
 const parseLocalDate = (dateString: string): Date => {
@@ -30,6 +31,12 @@ const App: React.FC = () => {
   useEffect(() => {
     saveDB(db);
   }, [db]);
+
+  // Apply brand settings on mount and when brandSettings changes
+  useEffect(() => {
+    const settings = db.brandSettings || DEFAULT_BRAND_SETTINGS;
+    applyBrandSettings(settings);
+  }, [db.brandSettings]);
 
   // AUTOMATISK SYNKRONISERING OG VARSLINGSLOGIKK
   const syncStaffingAndNotify = useCallback((occurrenceId: UUID, state: AppState, actor: Person): AppState => {
@@ -444,7 +451,7 @@ const App: React.FC = () => {
   }, [activeTab]);
 
   if (!currentUser) {
-    return <IdentityPicker persons={db.persons} onSelect={handleIdentitySelect} />;
+    return <IdentityPicker persons={db.persons} onSelect={handleIdentitySelect} organizationName={db.brandSettings?.organizationName} />;
   }
 
   const canSeeMessages = currentUser.core_role === CoreRole.ADMIN || currentUser.core_role === CoreRole.PASTOR || currentUser.core_role === CoreRole.TEAM_LEADER;
@@ -453,7 +460,14 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-left">
       <nav className="hidden md:flex flex-col w-64 bg-white border-r h-screen sticky top-0">
         <div className="p-6">
-          <h1 className="text-xl font-bold text-indigo-700 leading-tight uppercase tracking-tighter">EventMaster<br/><span className="text-indigo-400">LMK</span></h1>
+          <h1 className="text-xl font-bold text-primary-700 leading-tight uppercase tracking-tighter">
+            {db.brandSettings?.organizationName || 'EventMaster'}
+            {!db.brandSettings?.organizationName && (
+              <>
+                <br/><span className="text-primary-400">LMK</span>
+              </>
+            )}
+          </h1>
         </div>
         
         <div className="flex-1 px-4 space-y-1 py-2">
@@ -471,7 +485,7 @@ const App: React.FC = () => {
 
         <div className="p-4 border-t bg-slate-50">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
+            <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-xs">
               {currentUser.firstName.charAt(0)}
             </div>
             <div className="flex-1 overflow-hidden">
@@ -557,7 +571,7 @@ const App: React.FC = () => {
 const NavItem: React.FC<{active: boolean, onClick: () => void, icon: React.ReactNode, label: string}> = ({ active, onClick, icon, label }) => (
   <button 
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all ${active ? 'bg-indigo-50 text-indigo-700 font-bold text-sm shadow-sm' : 'text-slate-600 hover:bg-slate-100 text-sm font-medium'}`}
+    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all ${active ? 'bg-primary-50 text-primary-700 font-bold text-sm shadow-sm' : 'text-slate-600 hover:bg-slate-100 text-sm font-medium'}`}
   >
     {icon}
     <span>{label}</span>
@@ -567,7 +581,7 @@ const NavItem: React.FC<{active: boolean, onClick: () => void, icon: React.React
 const MobileNavItem: React.FC<{active: boolean, onClick: () => void, icon: React.ReactNode, label: string}> = ({ active, onClick, icon, label }) => (
   <button 
     onClick={onClick}
-    className={`flex flex-col items-center gap-1 px-3 py-1 rounded-md transition-all ${active ? 'text-indigo-700' : 'text-slate-400'}`}
+    className={`flex flex-col items-center gap-1 px-3 py-1 rounded-md transition-all ${active ? 'text-primary-700' : 'text-slate-400'}`}
   >
     {icon}
     <span className="text-[10px] font-bold">{label}</span>

@@ -148,7 +148,7 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
               <h3 className="text-sm font-bold flex items-center gap-2 text-slate-800">
-                <Calendar className="text-indigo-600" size={18} /> Planlagte vakter
+                <Calendar className="text-primary-600" size={18} /> Planlagte vakter
               </h3>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight bg-slate-100 px-2 py-0.5 rounded">{uniqueInvolvedEvents.length} arrangementer</span>
             </div>
@@ -173,7 +173,7 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
                 return (
                   <button key={occ.id} onClick={() => setSelectedOccurrenceId(occ.id)} className="w-full text-left p-4 hover:bg-slate-50 transition-all flex items-center justify-between group">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex flex-col items-center justify-center text-slate-600 border border-slate-200 group-hover:border-indigo-200 group-hover:text-indigo-600 transition-colors shrink-0">
+                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex flex-col items-center justify-center text-slate-600 border border-slate-200 group-hover:border-primary-200 group-hover:text-primary-600 transition-colors shrink-0">
                         <span className="text-[9px] font-bold uppercase leading-none mb-0.5">{new Intl.DateTimeFormat('no-NO', { month: 'short' }).format(parseLocalDate(occ.date))}</span>
                         <span className="text-lg font-bold leading-none">{parseLocalDate(occ.date).getDate()}</span>
                       </div>
@@ -183,7 +183,7 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
                         {uniqueRolesArray.length > 0 && (
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             {uniqueRolesArray.map(a => (
-                              <span key={`role-${occ.id}-${a.role?.id}`} className="text-[9px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded flex items-center gap-1">
+                              <span key={`role-${occ.id}-${a.role?.id}`} className="text-[9px] font-semibold text-primary-700 bg-primary-50 border border-primary-100 px-2 py-0.5 rounded flex items-center gap-1">
                                 <Shield size={10} /> {a.role?.name || 'Vakt'}
                               </span>
                             ))}
@@ -201,7 +201,7 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
                         )}
                       </div>
                     </div>
-                    <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-500 transition-colors shrink-0 ml-2" />
+                    <ChevronRight size={16} className="text-slate-300 group-hover:text-primary-500 transition-colors shrink-0 ml-2" />
                   </button>
                 );
               }) : (
@@ -225,8 +225,8 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
                 return (
                   <button key={group.id} onClick={() => onViewGroup(group.id)} className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 transition-all flex items-center justify-between group">
                     <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${group.category === GroupCategory.SERVICE ? 'bg-indigo-500' : 'bg-teal-500'}`}></div>
-                      <span className="text-xs font-semibold text-slate-700 group-hover:text-indigo-600">{group.name}</span>
+                      <div className={`w-2 h-2 rounded-full ${group.category === GroupCategory.SERVICE ? 'bg-primary-500' : 'bg-teal-500'}`}></div>
+                      <span className="text-xs font-semibold text-slate-700 group-hover:text-primary-600">{group.name}</span>
                     </div>
                     <ChevronRight size={14} className="text-slate-300 opacity-0 group-hover:opacity-100" />
                   </button>
@@ -258,25 +258,25 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
         <div className="lg:col-span-4 space-y-6">
           <section className="bg-slate-900 rounded-xl shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-800 flex items-center gap-2">
-              <Bell className="text-indigo-400" size={18} />
+              <Bell className="text-primary-400" size={18} />
               <h3 className="text-sm font-bold text-white">Viktige frister</h3>
             </div>
             <div className="p-4 space-y-3">
               {myTasks.length > 0 ? myTasks.map(task => (
-                <div key={task.id} className="bg-slate-800/40 p-3 rounded-lg border border-slate-700 hover:border-indigo-500/30 transition-all group">
-                  <p className="text-xs font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">{task.title}</p>
+                <div key={task.id} className="bg-slate-800/40 p-3 rounded-lg border border-slate-700 hover:border-primary-500/30 transition-all group">
+                  <p className="text-xs font-bold text-white mb-1 group-hover:text-primary-300 transition-colors">{task.title}</p>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
                       <Clock size={10} /> {new Intl.DateTimeFormat('no-NO', { day: 'numeric', month: 'short' }).format(new Date(task.deadline))}
                     </span>
-                    {task.occurrence && <span className="text-[9px] font-bold text-indigo-400/80 uppercase tracking-tighter">{task.occurrence.title_override}</span>}
+                    {task.occurrence && <span className="text-[9px] font-bold text-primary-400/80 uppercase tracking-tighter">{task.occurrence.title_override}</span>}
                   </div>
                 </div>
               )) : (
                 <p className="text-center py-4 text-xs text-slate-500">Ingen utestående frister.</p>
               )}
               {onGoToWheel && (
-                <button onClick={onGoToWheel} className="w-full mt-2 py-2 text-[10px] font-bold text-indigo-400 border border-slate-700 rounded-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+                <button onClick={onGoToWheel} className="w-full mt-2 py-2 text-[10px] font-bold text-primary-400 border border-slate-700 rounded-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
                   Vis årshjul <ArrowRight size={12} />
                 </button>
               )}
@@ -293,7 +293,7 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
           <div className="relative bg-white w-full max-w-5xl rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center shrink-0">
               <div className="text-left">
-                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{new Intl.DateTimeFormat('no-NO', { dateStyle: 'full' }).format(parseLocalDate(selectedOcc.date))}</span>
+                <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest">{new Intl.DateTimeFormat('no-NO', { dateStyle: 'full' }).format(parseLocalDate(selectedOcc.date))}</span>
                 <h3 className="text-lg font-bold text-slate-900 leading-tight mt-1">{selectedOcc.title_override || db.eventTemplates.find(t => t.id === selectedOcc.template_id)?.title}</h3>
                 {selectedOcc.theme && (
                   <p className="text-sm text-slate-600 italic mt-2">{selectedOcc.theme}</p>
@@ -312,7 +312,7 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
                     const responsiblePerson = item.person_id ? db.persons.find(p => p.id === item.person_id) : null;
                     const isMyItem = item.person_id === currentUser.id;
                     return (
-                      <div key={item.id} className={`flex items-center gap-4 p-3 rounded-lg border text-sm transition-all ${isMyItem ? 'bg-indigo-600 border-indigo-700 text-white' : 'bg-slate-50 border-slate-100'}`}>
+                      <div key={item.id} className={`flex items-center gap-4 p-3 rounded-lg border text-sm transition-all ${isMyItem ? 'bg-primary-600 border-primary-700 text-white' : 'bg-slate-50 border-slate-100'}`}>
                         {item.duration_minutes > 0 && (
                           <div className="flex flex-col items-center shrink-0 w-12 border-r border-current opacity-60">
                              <span className="text-[11px] font-bold">{item.formattedTime}</span>
@@ -322,16 +322,16 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
                         <div className="flex-1 min-w-0">
                            <h5 className="font-bold truncate">{item.title}</h5>
                            {item.description && item.description.trim() && (
-                             <p className={`text-xs italic mt-1 mb-1 ${isMyItem ? 'text-indigo-100' : 'text-slate-500'}`}>{item.description}</p>
+                             <p className={`text-xs italic mt-1 mb-1 ${isMyItem ? 'text-primary-100' : 'text-slate-500'}`}>{item.description}</p>
                            )}
                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
                              {responsible && (
-                               <span className={`text-[9px] font-bold uppercase opacity-70 px-2 py-0.5 rounded ${isMyItem ? 'bg-indigo-500/30' : 'bg-slate-200'}`}>
+                               <span className={`text-[9px] font-bold uppercase opacity-70 px-2 py-0.5 rounded ${isMyItem ? 'bg-primary-500/30' : 'bg-slate-200'}`}>
                                  {responsible}
                                </span>
                              )}
                              {responsiblePerson && (
-                               <span className={`text-[9px] font-semibold ${isMyItem ? 'text-indigo-100' : 'text-slate-600'}`}>
+                               <span className={`text-[9px] font-semibold ${isMyItem ? 'text-primary-100' : 'text-slate-600'}`}>
                                  Ansvarlig: {responsiblePerson.firstName} {responsiblePerson.lastName}
                                </span>
                              )}
@@ -347,8 +347,8 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Venstre: Min rolle & Team */}
                 <div className="space-y-6">
-                  <section className="bg-indigo-50/50 border border-indigo-100 p-5 rounded-lg">
-                    <h4 className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-4 flex items-center gap-2"><Shield size={14}/> Mine instrukser</h4>
+                  <section className="bg-primary-50/50 border border-primary-100 p-5 rounded-lg">
+                    <h4 className="text-[10px] font-bold text-primary-600 uppercase tracking-wider mb-4 flex items-center gap-2"><Shield size={14}/> Mine instrukser</h4>
                     <div className="space-y-6">
                       {(() => {
                         // Grupper assignments unikt per rolle for å unngå duplikater
@@ -368,7 +368,7 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
                             <div className="space-y-2">
                               {a.role?.default_instructions.map((inst, i) => (
                                 <div key={i} className="flex gap-3 text-left">
-                                  <div className="mt-1 w-4 h-4 rounded border border-indigo-300 bg-white flex items-center justify-center text-[10px] font-bold text-indigo-600 shrink-0">{i+1}</div>
+                                  <div className="mt-1 w-4 h-4 rounded border border-primary-300 bg-white flex items-center justify-center text-[10px] font-bold text-primary-600 shrink-0">{i+1}</div>
                                   <p className="text-slate-700 font-medium text-xs leading-relaxed">{inst}</p>
                                 </div>
                               ))}
@@ -412,7 +412,7 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
                           <div className="space-y-2">
                             {uniqueCombos.map(({ role, person }, idx) => (
                               <div key={`${role.id}-${person.id}-${idx}`} className="flex items-center gap-3 p-2.5 rounded-lg border bg-white border-slate-200">
-                                <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] bg-indigo-100 text-indigo-700 border border-indigo-200">
+                                <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] bg-primary-100 text-primary-700 border border-primary-200">
                                   {person.firstName.charAt(0)}
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -439,8 +439,8 @@ const Dashboard: React.FC<Props> = ({ db, currentUser, onGoToWheel, onViewGroup 
                          const role = db.serviceRoles.find(r => r.id === a.service_role_id);
                          if (!person) return null;
                          return (
-                           <div key={a.id} className={`flex items-center gap-3 p-2.5 rounded-lg border text-sm ${a.person_id === currentUser.id ? 'bg-indigo-50 border-indigo-100' : 'bg-slate-50 border-slate-100'}`}>
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] ${a.person_id === currentUser.id ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>{person.firstName.charAt(0)}</div>
+                           <div key={a.id} className={`flex items-center gap-3 p-2.5 rounded-lg border text-sm ${a.person_id === currentUser.id ? 'bg-primary-50 border-primary-100' : 'bg-slate-50 border-slate-100'}`}>
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] ${a.person_id === currentUser.id ? 'bg-primary-600 text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>{person.firstName.charAt(0)}</div>
                               <div className="flex-1 min-w-0">
                                 <p className="font-bold text-slate-800 truncate">{person.firstName} {person.lastName}</p>
                                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{role?.name}</p>

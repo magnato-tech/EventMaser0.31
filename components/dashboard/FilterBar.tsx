@@ -32,7 +32,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange }) => {
   return (
     <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/30 flex items-center gap-2">
-        <Filter className="text-indigo-600" size={18} />
+        <Filter className="text-primary-600" size={18} />
         <h3 className="text-sm font-bold text-slate-800">Filtre</h3>
       </div>
       <div className="p-5">
@@ -45,7 +45,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange }) => {
             <select
               value={filters.status}
               onChange={(e) => handleStatusChange(e.target.value as FilterStatus)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white hover:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
             >
               <option value="all">Alle</option>
               <option value="active">Aktiv</option>
@@ -61,7 +61,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange }) => {
             <select
               value={filters.gender}
               onChange={(e) => handleGenderChange(e.target.value as FilterGender)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white hover:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
             >
               <option value="all">Alle</option>
               <option value="male">Mann</option>
@@ -77,7 +77,7 @@ const FilterBar: React.FC<FilterBarProps> = ({ filters, onFilterChange }) => {
             <select
               value={filters.ageGroup}
               onChange={(e) => handleAgeGroupChange(e.target.value as FilterAgeGroup)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium bg-white hover:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
             >
               <option value="all">Alle</option>
               <option value="0-18">0-18 år</option>

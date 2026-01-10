@@ -178,6 +178,19 @@ export interface FamilyMember {
   isPrimaryResidence: boolean; // Kun én per person kan være true
 }
 
+/**
+ * Brand settings for customizable theming
+ * Stores primary color configuration
+ */
+export interface BrandSettings {
+  primaryColor: {
+    hue: number;      // HSL hue (0-360)
+    saturation: number; // HSL saturation (0-100%)
+    lightness: number;  // HSL lightness (0-100%)
+  };
+  organizationName?: string; // Optional: Menighetens navn
+}
+
 export interface AppState {
   persons: Person[];
   groups: Group[];
@@ -191,6 +204,7 @@ export interface AppState {
   tasks: Task[];
   noticeMessages: NoticeMessage[];
   changeLogs: ChangeLog[];
-  families: Family[]; // Ny
-  familyMembers: FamilyMember[]; // Ny
+  families: Family[];
+  familyMembers: FamilyMember[];
+  brandSettings?: BrandSettings; // Optional brand customization
 }

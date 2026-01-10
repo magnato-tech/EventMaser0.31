@@ -9,10 +9,36 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
+            /* Radius variables */
             --radius-sm: 4px;
             --radius-md: 8px;
             --radius-lg: 12px;
             --radius-xl: 16px;
+            
+            /* Primary brand color in HSL format for dynamic theming */
+            /* Default: Indigo (can be customized via Settings) */
+            --primary-hue: 221.2;
+            --primary-saturation: 83.2%;
+            --primary-lightness: 53.3%;
+            --primary: hsl(var(--primary-hue), var(--primary-saturation), var(--primary-lightness));
+            
+            /* Primary foreground (text on primary background) */
+            --primary-foreground-hue: 210;
+            --primary-foreground-saturation: 40%;
+            --primary-foreground-lightness: 98%;
+            --primary-foreground: hsl(var(--primary-foreground-hue), var(--primary-foreground-saturation), var(--primary-foreground-lightness));
+            
+            /* Primary variants for different shades */
+            --primary-50: hsl(var(--primary-hue), var(--primary-saturation), 97%);
+            --primary-100: hsl(var(--primary-hue), var(--primary-saturation), 95%);
+            --primary-200: hsl(var(--primary-hue), var(--primary-saturation), 90%);
+            --primary-300: hsl(var(--primary-hue), var(--primary-saturation), 80%);
+            --primary-400: hsl(var(--primary-hue), var(--primary-saturation), 65%);
+            --primary-500: var(--primary);
+            --primary-600: hsl(var(--primary-hue), var(--primary-saturation), 45%);
+            --primary-700: hsl(var(--primary-hue), var(--primary-saturation), 38%);
+            --primary-800: hsl(var(--primary-hue), var(--primary-saturation), 30%);
+            --primary-900: hsl(var(--primary-hue), var(--primary-saturation), 20%);
         }
         body {
             font-family: 'Inter', sans-serif;
@@ -35,11 +61,63 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
-        /* Fix for sharp focus states in ERP */
+        /* Dynamic focus states using CSS variables */
         input:focus, select:focus, textarea:focus {
-            border-color: #6366f1 !important;
-            box-shadow: 0 0 0 1px #6366f1 !important;
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 1px var(--primary) !important;
         }
+        
+        /* Utility classes for primary brand colors */
+        .bg-primary { background-color: var(--primary); }
+        .bg-primary-50 { background-color: var(--primary-50); }
+        .bg-primary-100 { background-color: var(--primary-100); }
+        .bg-primary-200 { background-color: var(--primary-200); }
+        .bg-primary-300 { background-color: var(--primary-300); }
+        .bg-primary-400 { background-color: var(--primary-400); }
+        .bg-primary-500 { background-color: var(--primary-500); }
+        .bg-primary-600 { background-color: var(--primary-600); }
+        .bg-primary-700 { background-color: var(--primary-700); }
+        .bg-primary-800 { background-color: var(--primary-800); }
+        .bg-primary-900 { background-color: var(--primary-900); }
+        
+        .text-primary { color: var(--primary); }
+        .text-primary-50 { color: var(--primary-50); }
+        .text-primary-100 { color: var(--primary-100); }
+        .text-primary-200 { color: var(--primary-200); }
+        .text-primary-300 { color: var(--primary-300); }
+        .text-primary-400 { color: var(--primary-400); }
+        .text-primary-500 { color: var(--primary-500); }
+        .text-primary-600 { color: var(--primary-600); }
+        .text-primary-700 { color: var(--primary-700); }
+        .text-primary-800 { color: var(--primary-800); }
+        .text-primary-900 { color: var(--primary-900); }
+        
+        .border-primary { border-color: var(--primary); }
+        .border-primary-50 { border-color: var(--primary-50); }
+        .border-primary-100 { border-color: var(--primary-100); }
+        .border-primary-200 { border-color: var(--primary-200); }
+        .border-primary-300 { border-color: var(--primary-300); }
+        .border-primary-400 { border-color: var(--primary-400); }
+        .border-primary-500 { border-color: var(--primary-500); }
+        .border-primary-600 { border-color: var(--primary-600); }
+        .border-primary-700 { border-color: var(--primary-700); }
+        .border-primary-800 { border-color: var(--primary-800); }
+        .border-primary-900 { border-color: var(--primary-900); }
+        
+        .hover\:bg-primary:hover { background-color: var(--primary); }
+        .hover\:bg-primary-50:hover { background-color: var(--primary-50); }
+        .hover\:bg-primary-100:hover { background-color: var(--primary-100); }
+        .hover\:bg-primary-200:hover { background-color: var(--primary-200); }
+        .hover\:bg-primary-600:hover { background-color: var(--primary-600); }
+        .hover\:bg-primary-700:hover { background-color: var(--primary-700); }
+        .hover\:text-primary:hover { color: var(--primary); }
+        .hover\:text-primary-600:hover { color: var(--primary-600); }
+        .hover\:text-primary-700:hover { color: var(--primary-700); }
+        .hover\:border-primary-100:hover { border-color: var(--primary-100); }
+        .group-hover\:bg-primary-200:hover { background-color: var(--primary-200); }
+        .group-hover\:text-primary-700:hover { color: var(--primary-700); }
+        .focus\:ring-primary-500:focus { --tw-ring-color: var(--primary-500); }
+        .focus\:ring-primary:focus { --tw-ring-color: var(--primary); }
     </style>
 <script type="importmap">
 {

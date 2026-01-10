@@ -949,7 +949,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
     switch (role) {
       case CoreRole.PASTOR: return 'bg-purple-50 text-purple-700 border-purple-100';
       case CoreRole.TEAM_LEADER: return 'bg-blue-50 text-blue-700 border-blue-100';
-      case CoreRole.ADMIN: return 'bg-indigo-50 text-indigo-700 border-indigo-100';
+      case CoreRole.ADMIN: return 'bg-primary-50 text-primary-700 border-primary-100';
       default: return 'bg-slate-100 text-slate-700 border-slate-200';
     }
   };
@@ -1084,7 +1084,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
             <button 
               key={tab}
               onClick={() => { setActiveTab(tab); setSelectedPersonId(null); }} 
-              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${activeTab === tab && !selectedPersonId ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${activeTab === tab && !selectedPersonId ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
             >
               {tab === 'persons' ? 'Personer' : tab === 'families' ? 'Familier' : tab === 'barnekirke' ? 'Barnekirke' : tab === 'fellowship' ? 'Husgrupper' : tab === 'service' ? 'Team' : tab === 'leadership' ? 'Ledelse' : 'Roller'}
             </button>
@@ -1139,7 +1139,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                         
                         if (selectedPerson.is_admin) {
                           return (
-                            <span className="inline-block mt-1 px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight bg-indigo-100 text-indigo-700 border-indigo-200">
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight bg-primary-100 text-primary-700 border-primary-200">
                               Administrator
                             </span>
                           );
@@ -1221,7 +1221,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                               {(isLeader || isDeputyLeader) && (
                                 <div className="flex items-center gap-1.5">
                                   {isLeader && <Star size={12} className="text-amber-500 fill-amber-500 shrink-0" />}
-                                  {isDeputyLeader && <Shield size={12} className="text-indigo-500 shrink-0" />}
+                                  {isDeputyLeader && <Shield size={12} className="text-primary-500 shrink-0" />}
                                   <p className="text-[10px] font-bold text-slate-700">
                                     {isLeader ? 'Gruppeleder' : 'Nestleder'}
                                   </p>
@@ -1230,8 +1230,8 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                               {/* Vis tjenesterolle hvis den finnes */}
                               {serviceRole && (
                                 <div className="flex items-center gap-1.5">
-                                  <Shield size={12} className="text-indigo-500 shrink-0" />
-                                  <span className="inline-flex items-center px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded text-[9px] font-semibold">
+                                  <Shield size={12} className="text-primary-500 shrink-0" />
+                                  <span className="inline-flex items-center px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-100 rounded text-[9px] font-semibold">
                                     {serviceRole.name}
                                   </span>
                                 </div>
@@ -1254,7 +1254,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
 
                <section className="bg-slate-900 rounded-xl shadow-sm overflow-hidden">
                  <div className="px-6 py-4 border-b border-slate-800 flex items-center gap-2">
-                   <Calendar className="text-indigo-400" size={18} />
+                   <Calendar className="text-primary-400" size={18} />
                    <h4 className="text-sm font-bold text-white">Kommende vakter</h4>
                  </div>
                  <div className="p-3 space-y-2">
@@ -1263,9 +1263,9 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                      const uniqueKey = a?.id || programItem?.id || `item-${index}`;
                      
                      return (
-                       <div key={uniqueKey} className="bg-slate-800/50 p-3 rounded-lg border border-slate-700 hover:border-indigo-500/50 transition-all flex items-center justify-between group">
+                       <div key={uniqueKey} className="bg-slate-800/50 p-3 rounded-lg border border-slate-700 hover:border-primary-500/50 transition-all flex items-center justify-between group">
                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-slate-700 rounded-lg flex flex-col items-center justify-center text-white border border-slate-600 group-hover:border-indigo-400/30 transition-all">
+                            <div className="w-10 h-10 bg-slate-700 rounded-lg flex flex-col items-center justify-center text-white border border-slate-600 group-hover:border-primary-400/30 transition-all">
                               <span className="text-[8px] font-bold uppercase leading-none mb-0.5">{new Intl.DateTimeFormat('no-NO', { month: 'short' }).format(new Date(occ!.date))}</span>
                               <span className="text-base font-bold leading-none">{new Date(occ!.date).getDate()}</span>
                             </div>
@@ -1277,7 +1277,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                               </p>
                             </div>
                          </div>
-                         <ChevronRight size={16} className="text-slate-600 group-hover:text-indigo-400 transition-colors" />
+                         <ChevronRight size={16} className="text-slate-600 group-hover:text-primary-400 transition-colors" />
                        </div>
                      );
                    })}
@@ -1299,10 +1299,10 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
           <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <input type="text" placeholder="Søk i roller..." value={roleSearch} onChange={e => setRoleSearch(e.target.value)} className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-md outline-none focus:ring-1 focus:ring-indigo-500 text-sm" />
+              <input type="text" placeholder="Søk i roller..." value={roleSearch} onChange={e => setRoleSearch(e.target.value)} className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-md outline-none focus:ring-1 focus:ring-primary-500 text-sm" />
             </div>
             {isAdmin && (
-              <button onClick={() => setIsCreateServiceRoleModalOpen(true)} className="px-4 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold hover:bg-indigo-700 shadow-sm flex items-center gap-2 transition-all"><Plus size={14} /> Ny Rolle</button>
+              <button onClick={() => setIsCreateServiceRoleModalOpen(true)} className="px-4 py-1.5 bg-primary-600 text-white rounded-md text-xs font-bold hover:bg-primary-700 shadow-sm flex items-center gap-2 transition-all"><Plus size={14} /> Ny Rolle</button>
             )}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
@@ -1310,11 +1310,11 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
               <button 
                 key={sr.id} 
                 onClick={() => setViewingRoleId(sr.id)}
-                className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:border-indigo-400 hover:shadow transition-all text-left group flex flex-col justify-between h-full min-h-[90px]"
+                className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:border-primary-400 hover:shadow transition-all text-left group flex flex-col justify-between h-full min-h-[90px]"
               >
                 <div>
                   <div className="flex justify-between items-start mb-2">
-                    <div className="p-1 bg-slate-50 rounded border border-slate-100 text-slate-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-colors">
+                    <div className="p-1 bg-slate-50 rounded border border-slate-100 text-slate-400 group-hover:text-primary-600 group-hover:bg-primary-50 transition-colors">
                       <Library size={12} />
                     </div>
                     {isAdmin && <Edit2 size={10} className="text-slate-300 opacity-0 group-hover:opacity-100" />}
@@ -1324,7 +1324,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 
                 <div className="mt-2 flex items-center justify-end">
                   {sr.default_instructions.length > 0 && (
-                    <div className="flex items-center gap-1 text-indigo-500" title="Instrukser tilgjengelig">
+                    <div className="flex items-center gap-1 text-primary-500" title="Instrukser tilgjengelig">
                       <ListChecks size={12} />
                       <span className="text-[9px] font-bold uppercase">Instruks</span>
                     </div>
@@ -1343,7 +1343,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 <input type="text" placeholder="Søk person..." value={personSearch} onChange={e => setPersonSearch(e.target.value)} className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-sm outline-none" />
               </div>
               {isAdmin && (
-                <button onClick={() => setIsCreatePersonModalOpen(true)} className="px-4 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold shadow-sm flex items-center gap-2"><Plus size={14} /> Ny Person</button>
+                <button onClick={() => setIsCreatePersonModalOpen(true)} className="px-4 py-1.5 bg-primary-600 text-white rounded-md text-xs font-bold shadow-sm flex items-center gap-2"><Plus size={14} /> Ny Person</button>
               )}
             </div>
             
@@ -1357,7 +1357,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   <button
                     type="button"
                     onClick={() => setIsAccessLevelDropdownOpen(!isAccessLevelDropdownOpen)}
-                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs text-left focus:ring-1 focus:ring-indigo-500 outline-none flex items-center justify-between hover:bg-slate-50 transition-colors"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs text-left focus:ring-1 focus:ring-primary-500 outline-none flex items-center justify-between hover:bg-slate-50 transition-colors"
                   >
                     <span className="text-slate-700">
                       {selectedRoles.size === 0 
@@ -1398,7 +1398,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                                     }
                                     setSelectedRoles(newSet);
                                   }}
-                                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                  className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
                                 />
                                 <span className="text-xs text-slate-700">{role}</span>
                               </label>
@@ -1433,7 +1433,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     <button
                       type="button"
                       onClick={() => setIsBirthYearDropdownOpen(!isBirthYearDropdownOpen)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs text-left focus:ring-1 focus:ring-indigo-500 outline-none flex items-center justify-between hover:bg-slate-50 transition-colors"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs text-left focus:ring-1 focus:ring-primary-500 outline-none flex items-center justify-between hover:bg-slate-50 transition-colors"
                     >
                       <span className="text-slate-700">
                         {selectedBirthYears.size === 0 
@@ -1474,7 +1474,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                                       }
                                       setSelectedBirthYears(newSet);
                                     }}
-                                    className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                    className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
                                   />
                                   <span className="text-xs text-slate-700">{year}</span>
                                 </label>
@@ -1514,7 +1514,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     setNewGroupCategory(GroupCategory.BARNKIRKE); // Sett Barnekirke som standard
                     setIsCreateModalOpen(true);
                   }}
-                  className="px-4 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold shadow-sm hover:bg-indigo-700 transition-all flex items-center gap-2"
+                  className="px-4 py-1.5 bg-primary-600 text-white rounded-md text-xs font-bold shadow-sm hover:bg-primary-700 transition-all flex items-center gap-2"
                   title={`Opprett gruppe med ${filteredPersons.length} personer fra utvalget`}
                 >
                   <Plus size={14} />
@@ -1541,7 +1541,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     <div className="flex items-center gap-1.5">
                       Navn
                       {sortColumn === 'name' && (
-                        <span className="text-indigo-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        <span className="text-primary-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </div>
                   </th>
@@ -1559,7 +1559,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     <div className="flex items-center gap-1.5">
                       Født
                       {sortColumn === 'birthDate' && (
-                        <span className="text-indigo-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        <span className="text-primary-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </div>
                   </th>
@@ -1577,7 +1577,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     <div className="flex items-center gap-1.5">
                       Rolle
                       {sortColumn === 'role' && (
-                        <span className="text-indigo-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        <span className="text-primary-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </div>
                   </th>
@@ -1597,7 +1597,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     <div className="flex items-center gap-1.5">
                       Adresse
                       {sortColumn === 'address' && (
-                        <span className="text-indigo-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        <span className="text-primary-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </div>
                   </th>
@@ -1619,7 +1619,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   let roleColorClass = 'bg-slate-100 text-slate-600 border-slate-200';
                   if (person.is_admin) {
                     roleLabel = 'Administrator';
-                    roleColorClass = 'bg-indigo-100 text-indigo-700 border-indigo-200';
+                    roleColorClass = 'bg-primary-100 text-primary-700 border-primary-200';
                   } else if (isGroupLeader) {
                     roleLabel = 'Gruppeleder';
                     roleColorClass = 'bg-amber-100 text-amber-700 border-amber-200';
@@ -1647,7 +1647,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                       <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         {isAdmin && (
                           <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => setEditingPerson(person)} className="p-1.5 text-slate-400 hover:text-indigo-600 bg-slate-100 rounded-md transition-colors"><Edit2 size={14} /></button>
+                            <button onClick={() => setEditingPerson(person)} className="p-1.5 text-slate-400 hover:text-primary-600 bg-slate-100 rounded-md transition-colors"><Edit2 size={14} /></button>
                             <button onClick={() => handleDeletePerson(person.id)} className="p-1.5 text-slate-400 hover:text-rose-600 bg-slate-100 rounded-md transition-colors"><Trash2 size={14} /></button>
                           </div>
                         )}
@@ -1666,7 +1666,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
             {isAdmin && (
               <button 
                 onClick={() => setIsCreateFamilyModalOpen(true)}
-                className="px-4 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold hover:bg-indigo-700 shadow-sm flex items-center gap-2 transition-all"
+                className="px-4 py-1.5 bg-primary-600 text-white rounded-md text-xs font-bold hover:bg-primary-700 shadow-sm flex items-center gap-2 transition-all"
               >
                 <Plus size={14} /> Ny Familie
               </button>
@@ -1682,9 +1682,9 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 <div 
                   key={family.id}
                   onClick={() => setViewingFamilyId(family.id)}
-                  className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group"
+                  className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:border-primary-400 hover:shadow-md transition-all cursor-pointer group"
                 >
-                  <h3 className="text-sm font-bold text-slate-900 mb-2 group-hover:text-indigo-600">{family.name || 'Familie uten navn'}</h3>
+                  <h3 className="text-sm font-bold text-slate-900 mb-2 group-hover:text-primary-600">{family.name || 'Familie uten navn'}</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">{members.length} medlemmer</p>
                   {address && (
                     <p className="text-xs text-slate-500 mb-3 truncate">{address}</p>
@@ -1696,7 +1696,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                         setSelectedFamilyForMember(family.id); 
                         setIsAddMemberModalOpen(true); 
                       }}
-                      className="w-full mt-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-md text-xs font-bold hover:bg-indigo-100 transition-all flex items-center justify-center gap-2"
+                      className="w-full mt-2 px-3 py-1.5 bg-primary-50 text-primary-600 rounded-md text-xs font-bold hover:bg-primary-100 transition-all flex items-center justify-center gap-2"
                     >
                       <Plus size={12} /> Legg til medlem
                     </button>
@@ -1722,7 +1722,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                               GroupCategory.STRATEGY;
               setNewGroupCategory(category);
               setIsCreateModalOpen(true);
-            }} className="px-4 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-bold shadow-sm hover:bg-indigo-700 transition-all flex items-center gap-2"><Plus size={14} /> Ny Gruppe</button>}
+            }} className="px-4 py-1.5 bg-primary-600 text-white rounded-md text-xs font-bold shadow-sm hover:bg-primary-700 transition-all flex items-center gap-2"><Plus size={14} /> Ny Gruppe</button>}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredGroups.map(group => {
@@ -1739,13 +1739,13 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 <button 
                   key={group.id} 
                   onClick={() => setViewingGroupId(group.id)}
-                  className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all group relative flex flex-col h-full text-left"
+                  className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:border-primary-400 hover:shadow-md transition-all group relative flex flex-col h-full text-left"
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3"><div className="p-2 bg-slate-50 border border-slate-100 rounded-lg">{getIcon(group.category)}</div><h3 className="text-sm font-bold text-slate-900">{group.name}</h3></div>
                     {isAdmin && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={(e) => { e.stopPropagation(); setManageGroupId(group.id); }} className="p-1.5 text-slate-300 hover:text-indigo-600 rounded-md transition-all"><Edit2 size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); setManageGroupId(group.id); }} className="p-1.5 text-slate-300 hover:text-primary-600 rounded-md transition-all"><Edit2 size={14} /></button>
                         <button onClick={(e) => { e.stopPropagation(); setIsDeletingGroup(group.id); }} className="p-1.5 text-slate-300 hover:text-rose-600 rounded-md transition-all"><Trash2 size={14} /></button>
                       </div>
                     )}
@@ -1783,12 +1783,12 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px]">
           <div className="absolute inset-0" onClick={() => { setIsCreateFamilyModalOpen(false); setNewFamilyName(''); }}></div>
           <div className="relative bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left">
-            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
-              <div className="flex items-center gap-3 text-indigo-700">
+            <div className="px-5 py-4 border-b border-primary-100 flex justify-between items-center bg-primary-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-primary-700">
                 <Users size={20} />
                 <h3 className="font-bold">Opprett Ny Familie</h3>
               </div>
-              <button onClick={() => { setIsCreateFamilyModalOpen(false); setNewFamilyName(''); }} className="p-1 hover:bg-indigo-100 rounded-md transition-colors">
+              <button onClick={() => { setIsCreateFamilyModalOpen(false); setNewFamilyName(''); }} className="p-1 hover:bg-primary-100 rounded-md transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -1801,11 +1801,11 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   type="text"
                   value={newFamilyName}
                   onChange={(e) => setNewFamilyName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-primary-500 outline-none"
                   placeholder="f.eks. Familien Hansen"
                 />
               </div>
-              <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all">
+              <button type="submit" className="w-full py-2 bg-primary-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-primary-700 transition-all">
                 Opprett Familie
               </button>
             </form>
@@ -1829,8 +1829,8 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
             setNewPersonBirthDate('');
           }}></div>
           <div className="relative bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left max-h-[90vh]">
-            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
-              <div className="flex items-center gap-3 text-indigo-700">
+            <div className="px-5 py-4 border-b border-primary-100 flex justify-between items-center bg-primary-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-primary-700">
                 <UserPlus size={20} />
                 <h3 className="font-bold">{newlyCreatedFamilyId ? 'Legg til første medlem' : 'Legg til familiemedlem'}</h3>
               </div>
@@ -1845,7 +1845,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 setNewPersonPhone('');
                 setNewPersonBirthYear('');
                 setNewPersonBirthDate('');
-              }} className="p-1 hover:bg-indigo-100 rounded-md transition-colors">
+              }} className="p-1 hover:bg-primary-100 rounded-md transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -1877,7 +1877,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                         setIsNewPerson(false);
                       }
                     }}
-                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                     placeholder="Skriv navn for å søke eller opprett ny..."
                   />
                 </div>
@@ -1904,7 +1904,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                             setMemberPersonSearch(`${person.firstName} ${person.lastName}`);
                             setIsNewPerson(false);
                           }}
-                          className="w-full text-left px-3 py-2 hover:bg-indigo-50 transition-colors border-b border-slate-100 last:border-b-0"
+                          className="w-full text-left px-3 py-2 hover:bg-primary-50 transition-colors border-b border-slate-100 last:border-b-0"
                         >
                           <p className="text-sm font-semibold text-slate-800">{person.firstName} {person.lastName}</p>
                           <p className="text-xs text-slate-500">{person.email}</p>
@@ -1926,12 +1926,12 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
 
                 {/* Valgt eksisterende person */}
                 {memberPersonId && !isNewPerson && (
-                  <div className="mt-2 p-3 bg-indigo-50 rounded-md border border-indigo-200">
-                    <p className="text-xs font-bold text-indigo-700 mb-1">Valgt: {(() => {
+                  <div className="mt-2 p-3 bg-primary-50 rounded-md border border-primary-200">
+                    <p className="text-xs font-bold text-primary-700 mb-1">Valgt: {(() => {
                       const person = db.persons.find(p => p.id === memberPersonId);
                       return person ? `${person.firstName} ${person.lastName}` : '';
                     })()}</p>
-                    <p className="text-xs text-indigo-600">{db.persons.find(p => p.id === memberPersonId)?.email}</p>
+                    <p className="text-xs text-primary-600">{db.persons.find(p => p.id === memberPersonId)?.email}</p>
                   </div>
                 )}
 
@@ -1959,7 +1959,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                         type="email"
                         value={newPersonEmail}
                         onChange={(e) => setNewPersonEmail(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                         placeholder="person@eksempel.no"
                       />
                     </div>
@@ -1971,7 +1971,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                         type="tel"
                         value={newPersonPhone}
                         onChange={(e) => setNewPersonPhone(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                         placeholder="+47 123 45 678"
                       />
                     </div>
@@ -1986,7 +1986,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                           max={new Date().getFullYear()}
                           value={newPersonBirthYear}
                           onChange={(e) => setNewPersonBirthYear(e.target.value)}
-                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                           placeholder="f.eks. 1990"
                         />
                       </div>
@@ -1998,7 +1998,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                           type="date"
                           value={newPersonBirthDate}
                           onChange={(e) => setNewPersonBirthDate(e.target.value)}
-                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                         />
                       </div>
                     </div>
@@ -2011,7 +2011,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 <select
                   value={memberFamilyRole}
                   onChange={(e) => setMemberFamilyRole(e.target.value as FamilyRole)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-primary-500 outline-none"
                 >
                   <option value={FamilyRole.PARENT}>Forelder</option>
                   <option value={FamilyRole.CHILD}>Barn</option>
@@ -2026,7 +2026,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   id="isSecondaryResidence"
                   checked={memberIsSecondaryResidence}
                   onChange={(e) => setMemberIsSecondaryResidence(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
                 />
                 <label htmlFor="isSecondaryResidence" className="text-sm font-medium text-slate-700">
                   Dette er personens sekundæradresse (delt bosted)
@@ -2036,7 +2036,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
               <button
                 type="submit"
                 disabled={!memberPersonSearch.trim()}
-                className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
+                className="w-full py-2 bg-primary-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-primary-700 transition-all disabled:bg-slate-300 disabled:cursor-not-allowed"
               >
                 {isNewPerson ? 'Opprett person og legg til i familie' : 'Legg til medlem'}
               </button>
@@ -2050,12 +2050,12 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px]">
           <div className="absolute inset-0" onClick={() => setIsCreateServiceRoleModalOpen(false)}></div>
           <div className="relative bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left">
-            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
-              <div className="flex items-center gap-3 text-indigo-700">
+            <div className="px-5 py-4 border-b border-primary-100 flex justify-between items-center bg-primary-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-primary-700">
                 <Library size={20} />
                 <h3 className="font-bold">Opprett Ny Rolle</h3>
               </div>
-              <button onClick={() => setIsCreateServiceRoleModalOpen(false)} className="p-1 hover:bg-indigo-100 rounded-md transition-colors">
+              <button onClick={() => setIsCreateServiceRoleModalOpen(false)} className="p-1 hover:bg-primary-100 rounded-md transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -2067,7 +2067,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   required
                   name="name"
                   type="text"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-primary-500 outline-none"
                   placeholder="f.eks. Møteleder"
                 />
               </div>
@@ -2076,11 +2076,11 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 <textarea
                   name="instructions"
                   rows={6}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none resize-none"
                   placeholder="1. Første instruks&#10;2. Andre instruks&#10;3. Tredje instruks"
                 />
               </div>
-              <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all">
+              <button type="submit" className="w-full py-2 bg-primary-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-primary-700 transition-all">
                 Opprett Rolle
               </button>
             </form>
@@ -2093,12 +2093,12 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px]">
           <div className="absolute inset-0" onClick={() => setIsCreatePersonModalOpen(false)}></div>
           <div className="relative bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left max-h-[90vh]">
-            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
-              <div className="flex items-center gap-3 text-indigo-700">
+            <div className="px-5 py-4 border-b border-primary-100 flex justify-between items-center bg-primary-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-primary-700">
                 <UserPlus size={20} />
                 <h3 className="font-bold">Opprett Ny Person</h3>
               </div>
-              <button onClick={() => setIsCreatePersonModalOpen(false)} className="p-1 hover:bg-indigo-100 rounded-md transition-colors">
+              <button onClick={() => setIsCreatePersonModalOpen(false)} className="p-1 hover:bg-primary-100 rounded-md transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -2110,7 +2110,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   required
                   name="firstName"
                   type="text"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-primary-500 outline-none"
                   placeholder="Fornavn"
                 />
               </div>
@@ -2120,7 +2120,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   required
                   name="lastName"
                   type="text"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-primary-500 outline-none"
                   placeholder="Etternavn"
                 />
               </div>
@@ -2129,7 +2129,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 <input
                   name="email"
                   type="email"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                   placeholder="person@eksempel.no"
                 />
               </div>
@@ -2138,7 +2138,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 <input
                   name="phone"
                   type="tel"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                   placeholder="+47 123 45 678"
                 />
               </div>
@@ -2147,7 +2147,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 <input
                   name="birth_date"
                   type="date"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                 />
               </div>
               <div>
@@ -2155,7 +2155,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 <input
                   name="streetAddress"
                   type="text"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                   placeholder="Gate og husnummer"
                 />
               </div>
@@ -2165,7 +2165,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   <input
                     name="postalCode"
                     type="text"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                     placeholder="0000"
                   />
                 </div>
@@ -2174,7 +2174,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   <input
                     name="city"
                     type="text"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                     placeholder="By"
                   />
                 </div>
@@ -2184,11 +2184,11 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   name="is_admin"
                   type="checkbox"
                   value="true"
-                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
                 />
                 <label className="text-sm font-medium text-slate-700">Gi administratorrettigheter</label>
               </div>
-              <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all">
+              <button type="submit" className="w-full py-2 bg-primary-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-primary-700 transition-all">
                 Opprett Person
               </button>
             </form>
@@ -2201,12 +2201,12 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px]">
           <div className="absolute inset-0" onClick={() => setEditingPerson(null)}></div>
           <div className="relative bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left max-h-[90vh]">
-            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
-              <div className="flex items-center gap-3 text-indigo-700">
+            <div className="px-5 py-4 border-b border-primary-100 flex justify-between items-center bg-primary-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-primary-700">
                 <Edit2 size={20} />
                 <h3 className="font-bold">Rediger Person</h3>
               </div>
-              <button onClick={() => setEditingPerson(null)} className="p-1 hover:bg-indigo-100 rounded-md transition-colors">
+              <button onClick={() => setEditingPerson(null)} className="p-1 hover:bg-primary-100 rounded-md transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -2219,7 +2219,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   name="firstName"
                   type="text"
                   defaultValue={editingPerson.firstName}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-primary-500 outline-none"
                 />
               </div>
               <div>
@@ -2229,7 +2229,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   name="lastName"
                   type="text"
                   defaultValue={editingPerson.lastName}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-primary-500 outline-none"
                 />
               </div>
               <div>
@@ -2238,7 +2238,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   name="email"
                   type="email"
                   defaultValue={editingPerson.email || ''}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                   placeholder="person@eksempel.no"
                 />
               </div>
@@ -2248,7 +2248,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   name="phone"
                   type="tel"
                   defaultValue={editingPerson.phone || ''}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                   placeholder="+47 123 45 678"
                 />
               </div>
@@ -2258,7 +2258,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   name="birth_date"
                   type="date"
                   defaultValue={editingPerson.birth_date || ''}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                 />
               </div>
               <div>
@@ -2267,7 +2267,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   name="streetAddress"
                   type="text"
                   defaultValue={editingPerson.streetAddress || ''}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                   placeholder="Gate og husnummer"
                 />
               </div>
@@ -2278,7 +2278,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     name="postalCode"
                     type="text"
                     defaultValue={editingPerson.postalCode || ''}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                     placeholder="0000"
                   />
                 </div>
@@ -2288,7 +2288,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     name="city"
                     type="text"
                     defaultValue={editingPerson.city || ''}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                     placeholder="By"
                   />
                 </div>
@@ -2299,11 +2299,11 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   type="checkbox"
                   value="true"
                   defaultChecked={editingPerson.is_admin}
-                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
                 />
                 <label className="text-sm font-medium text-slate-700">Gi administratorrettigheter</label>
               </div>
-              <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all">
+              <button type="submit" className="w-full py-2 bg-primary-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-primary-700 transition-all">
                 Oppdater Person
               </button>
             </form>
@@ -2316,12 +2316,12 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px]">
           <div className="absolute inset-0" onClick={() => setEditingFamily(null)}></div>
           <div className="relative bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left">
-            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
-              <div className="flex items-center gap-3 text-indigo-700">
+            <div className="px-5 py-4 border-b border-primary-100 flex justify-between items-center bg-primary-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-primary-700">
                 <Edit2 size={20} />
                 <h3 className="font-bold">Rediger Familie</h3>
               </div>
-              <button onClick={() => setEditingFamily(null)} className="p-1 hover:bg-indigo-100 rounded-md transition-colors">
+              <button onClick={() => setEditingFamily(null)} className="p-1 hover:bg-primary-100 rounded-md transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -2333,11 +2333,11 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   name="name"
                   type="text"
                   defaultValue={editingFamily.name || ''}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-primary-500 outline-none"
                   placeholder="f.eks. Familien Hansen"
                 />
               </div>
-              <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all">
+              <button type="submit" className="w-full py-2 bg-primary-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-primary-700 transition-all">
                 Oppdater Familie
               </button>
             </form>
@@ -2350,16 +2350,16 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px]">
           <div className="absolute inset-0" onClick={() => setViewingRoleId(null)}></div>
           <div className="relative bg-white w-full max-w-lg rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 text-left max-h-[90vh]">
-            <div className="px-5 py-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50/50 shrink-0">
-              <div className="flex items-center gap-3 text-indigo-700"><Library size={20} /><h3 className="font-bold">Rolleinstruks: {viewedRole.name}</h3></div>
-              <button onClick={() => setViewingRoleId(null)} className="p-1 hover:bg-indigo-100 rounded-md transition-colors"><X size={20} /></button>
+            <div className="px-5 py-4 border-b border-primary-100 flex justify-between items-center bg-primary-50/50 shrink-0">
+              <div className="flex items-center gap-3 text-primary-700"><Library size={20} /><h3 className="font-bold">Rolleinstruks: {viewedRole.name}</h3></div>
+              <button onClick={() => setViewingRoleId(null)} className="p-1 hover:bg-primary-100 rounded-md transition-colors"><X size={20} /></button>
             </div>
             <form onSubmit={handleUpdateRole} className="flex-1 overflow-y-auto p-6 space-y-5">
               {isAdmin ? (
                 <>
-                  <div><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Rollenavn</label><input required name="name" defaultValue={viewedRole.name} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-indigo-500 outline-none" /></div>
-                  <div><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Instrukser (én per linje)</label><textarea name="instructions" defaultValue={viewedRole.default_instructions.join('\n')} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm h-64 font-medium focus:ring-1 focus:ring-indigo-500 outline-none" /></div>
-                  <button type="submit" className="w-full py-2 bg-indigo-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all">Oppdater Katalog</button>
+                  <div><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Rollenavn</label><input required name="name" defaultValue={viewedRole.name} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold focus:ring-1 focus:ring-primary-500 outline-none" /></div>
+                  <div><label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Instrukser (én per linje)</label><textarea name="instructions" defaultValue={viewedRole.default_instructions.join('\n')} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm h-64 font-medium focus:ring-1 focus:ring-primary-500 outline-none" /></div>
+                  <button type="submit" className="w-full py-2 bg-primary-600 text-white rounded-md font-bold text-sm shadow-sm hover:bg-primary-700 transition-all">Oppdater Katalog</button>
                 </>
               ) : (
                 <div className="space-y-4">
@@ -2367,7 +2367,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     <div className="space-y-2">
                       {viewedRole.default_instructions.map((inst, i) => (
                         <div key={i} className="flex gap-3 text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100 font-medium">
-                          <div className="w-5 h-5 rounded border border-indigo-200 shrink-0 flex items-center justify-center text-[10px] font-bold text-indigo-500 bg-white">{i+1}</div>
+                          <div className="w-5 h-5 rounded border border-primary-200 shrink-0 flex items-center justify-center text-[10px] font-bold text-primary-500 bg-white">{i+1}</div>
                           {inst}
                         </div>
                       ))}
@@ -2484,7 +2484,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                           type="text"
                           value={editingFamilyStreetAddress}
                           onChange={(e) => setEditingFamilyStreetAddress(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                           placeholder="Gate og husnummer"
                         />
                       </div>
@@ -2494,7 +2494,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                           type="text"
                           value={editingFamilyPostalCode}
                           onChange={(e) => setEditingFamilyPostalCode(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                           placeholder="0000"
                         />
                       </div>
@@ -2504,12 +2504,12 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                           type="text"
                           value={editingFamilyCity}
                           onChange={(e) => setEditingFamilyCity(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                           placeholder="By"
                         />
                       </div>
                     </div>
-                    <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2">
+                    <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-bold hover:bg-primary-700 transition-colors flex items-center gap-2">
                       <Save size={14} /> Lagre adresse
                     </button>
                   </form>
@@ -2521,7 +2521,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                         <h3 className="text-sm font-bold text-slate-800">Familieadresse</h3>
                       </div>
                       {isAdmin && (
-                        <button onClick={() => setIsEditingFamilyAddress(true)} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
+                        <button onClick={() => setIsEditingFamilyAddress(true)} className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
                           <Edit2 size={12} /> Rediger
                         </button>
                       )}
@@ -2538,7 +2538,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 {parents.length > 0 && (
                   <section>
                     <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                      <Users size={16} className="text-indigo-500" /> Foreldre/Ektefeller
+                      <Users size={16} className="text-primary-500" /> Foreldre/Ektefeller
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {parents.map(({ member, person }) => (
@@ -2552,16 +2552,16 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                               setSelectedPersonId(person.id);
                             }
                           }}
-                          className="bg-white border border-slate-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group"
+                          className="bg-white border border-slate-200 rounded-lg p-4 hover:border-primary-400 hover:shadow-md transition-all cursor-pointer group"
                         >
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2 flex-1">
                               {member.role === FamilyRole.PARENT ? (
-                                <User size={18} className="text-indigo-500" />
+                                <User size={18} className="text-primary-500" />
                               ) : (
                                 <Heart size={18} className="text-rose-500" />
                               )}
-                              <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                              <h4 className="font-bold text-slate-900 group-hover:text-primary-600 transition-colors">
                                 {person.firstName} {person.lastName}
                               </h4>
                             </div>
@@ -2591,7 +2591,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 {children.length > 0 && (
                   <section>
                     <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                      <Baby size={16} className="text-indigo-500" /> Barn
+                      <Baby size={16} className="text-primary-500" /> Barn
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {children.map(({ member, person }) => {
@@ -2611,12 +2611,12 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                                 setSelectedPersonId(person.id);
                               }
                             }}
-                            className="bg-white border border-slate-200 rounded-lg p-4 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group"
+                            className="bg-white border border-slate-200 rounded-lg p-4 hover:border-primary-400 hover:shadow-md transition-all cursor-pointer group"
                           >
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex items-center gap-2 flex-1">
-                                <Baby size={16} className="text-indigo-400" />
-                                <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                                <Baby size={16} className="text-primary-400" />
+                                <h4 className="font-bold text-slate-900 group-hover:text-primary-600 transition-colors">
                                   {person.firstName} {person.lastName}
                                 </h4>
                               </div>
@@ -2647,7 +2647,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                           setSelectedFamilyForMember(viewingFamilyId);
                           setIsAddMemberModalOpen(true);
                         }}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2 mx-auto mt-4"
+                        className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-bold hover:bg-primary-700 transition-colors flex items-center gap-2 mx-auto mt-4"
                       >
                         <UserPlus size={14} /> Legg til første medlem
                       </button>
@@ -2664,7 +2664,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                       setSelectedFamilyForMember(viewingFamilyId);
                       setIsAddMemberModalOpen(true);
                     }}
-                    className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-bold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                    className="w-full px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-bold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
                   >
                     <UserPlus size={16} /> Legg til medlem
                   </button>
@@ -2716,7 +2716,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     type="text"
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none"
                     required
                   />
                 </div>
@@ -2726,7 +2726,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   <select
                     value={newGroupCategory}
                     onChange={(e) => setNewGroupCategory(e.target.value as GroupCategory)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none"
                   >
                     <option value={GroupCategory.BARNKIRKE}>Barnekirke</option>
                     <option value={GroupCategory.FELLOWSHIP}>Husgruppe</option>
@@ -2741,7 +2741,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     value={newGroupDescription}
                     onChange={(e) => setNewGroupDescription(e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none"
                     placeholder="Beskriv gruppens formål og aktiviteter..."
                   />
                 </div>
@@ -2752,7 +2752,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     type="url"
                     value={newGroupLink}
                     onChange={(e) => setNewGroupLink(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none"
                     placeholder="https://..."
                   />
                 </div>
@@ -2768,7 +2768,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     <select
                       value={newGroupDayOfWeek}
                       onChange={(e) => setNewGroupDayOfWeek(parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none"
                     >
                       <option value={0}>Søndag</option>
                       <option value={1}>Mandag</option>
@@ -2785,7 +2785,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     <select
                       value={newGroupFrequency}
                       onChange={(e) => setNewGroupFrequency(parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none"
                     >
                       <option value={0}>Ingen planlagt</option>
                       <option value={1}>1 gang pr uke</option>
@@ -2801,7 +2801,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                       type="date"
                       value={newGroupStartDate}
                       onChange={(e) => setNewGroupStartDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none"
                     />
                   </div>
                 </div>
@@ -2816,7 +2816,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                   <select
                     value={newGroupLeaderId || ''}
                     onChange={(e) => setNewGroupLeaderId(e.target.value || null)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none"
                   >
                     <option value="">Ingen leder valgt</option>
                     {db.persons.map(person => (
@@ -2836,7 +2836,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                         value={newGroupMemberSearch}
                         onChange={(e) => setNewGroupMemberSearch(e.target.value)}
                         placeholder="Søk og legg til person..."
-                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none text-sm"
                       />
                       {newGroupMemberSearch && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -2885,13 +2885,13 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                           return (
                             <div
                               key={personId}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-md text-sm"
+                              className="flex items-center gap-2 px-3 py-1.5 bg-primary-50 border border-primary-200 rounded-md text-sm"
                             >
-                              <span className="text-indigo-900 font-medium">{person.firstName} {person.lastName}</span>
+                              <span className="text-primary-900 font-medium">{person.firstName} {person.lastName}</span>
                               <button
                                 type="button"
                                 onClick={() => setNewGroupMemberIds(newGroupMemberIds.filter(id => id !== personId))}
-                                className="text-indigo-600 hover:text-indigo-800"
+                                className="text-primary-600 hover:text-primary-800"
                               >
                                 <X size={14} />
                               </button>
@@ -2906,7 +2906,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
 
               <div className="flex gap-3 justify-end pt-4 border-t border-slate-200 shrink-0">
                 <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-md transition-colors">Avbryt</button>
-                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">Opprett Gruppe</button>
+                <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors">Opprett Gruppe</button>
               </div>
             </form>
           </div>
@@ -2953,7 +2953,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                 {viewedGroup.link && (
                   <div>
                     <h3 className="text-sm font-bold text-slate-800 mb-2">Link</h3>
-                    <a href={viewedGroup.link} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline flex items-center gap-2">
+                    <a href={viewedGroup.link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary-600 hover:underline flex items-center gap-2">
                       <ExternalLink size={14} />
                       {viewedGroup.link}
                     </a>
@@ -2991,13 +2991,13 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                             setSelectedPersonId(leaderPerson.id);
                           }
                         }}
-                        className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 hover:border-indigo-400 border border-transparent transition-all cursor-pointer group"
+                        className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 hover:border-primary-400 border border-transparent transition-all cursor-pointer group"
                       >
-                        <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold">
+                        <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 font-bold">
                           {leaderPerson.firstName.charAt(0)}
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{leaderPerson.firstName} {leaderPerson.lastName}</p>
+                          <p className="font-semibold text-slate-900 group-hover:text-primary-600 transition-colors">{leaderPerson.firstName} {leaderPerson.lastName}</p>
                           {leaderPerson.email && <p className="text-xs text-slate-500">{leaderPerson.email}</p>}
                           {leaderPerson.phone && <p className="text-xs text-slate-500">{leaderPerson.phone}</p>}
                         </div>
@@ -3035,7 +3035,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                               {person.firstName.charAt(0)}
                             </div>
                             <div className="flex-1">
-                              <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{person.firstName} {person.lastName}</p>
+                              <p className="font-semibold text-slate-900 group-hover:text-primary-600 transition-colors">{person.firstName} {person.lastName}</p>
                               {person.email && <p className="text-xs text-slate-500">{person.email}</p>}
                               {person.phone && <p className="text-xs text-slate-500">{person.phone}</p>}
                             </div>
@@ -3069,13 +3069,13 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                                 setSelectedPersonId(person.id);
                               }
                             }}
-                            className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 hover:border-indigo-400 border border-transparent transition-all cursor-pointer group"
+                            className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 hover:border-primary-400 border border-transparent transition-all cursor-pointer group"
                           >
                             <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 font-bold text-xs">
                               {person.firstName.charAt(0)}
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">{person.firstName} {person.lastName}</p>
+                              <p className="text-sm font-medium text-slate-900 group-hover:text-primary-600 transition-colors">{person.firstName} {person.lastName}</p>
                               {person.email && <p className="text-xs text-slate-500">{person.email}</p>}
                               {person.phone && <p className="text-xs text-slate-500">{person.phone}</p>}
                             </div>
@@ -3121,7 +3121,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     type="text"
                     value={editingGroupName}
                     onChange={(e) => setEditingGroupName(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none text-sm"
                   />
                 </div>
 
@@ -3131,7 +3131,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     value={editingGroupDescription}
                     onChange={(e) => setEditingGroupDescription(e.target.value)}
                     rows={6}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm resize-none"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none text-sm resize-none"
                     placeholder="Beskriv gruppens formål og aktiviteter..."
                   />
                 </div>
@@ -3145,7 +3145,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     type="url"
                     value={editingGroupLink}
                     onChange={(e) => setEditingGroupLink(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none text-sm"
                     placeholder="https://..."
                   />
                 </div>
@@ -3172,7 +3172,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                           <select
                             value={tempPattern.day_of_week}
                             onChange={(e) => handleUpdateGatheringPattern({ day_of_week: parseInt(e.target.value) })}
-                            className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                            className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none text-sm"
                           >
                             <option value={0}>Søndag</option>
                             <option value={1}>Mandag</option>
@@ -3189,7 +3189,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                           <select
                             value={tempPattern.interval}
                             onChange={(e) => handleUpdateGatheringPattern({ interval: parseInt(e.target.value) })}
-                            className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                            className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none text-sm"
                           >
                             <option value={1}>1 gang pr uke</option>
                             <option value={2}>1 gang pr 2 uker</option>
@@ -3205,7 +3205,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                           type="date"
                           value={tempPattern.start_date}
                           onChange={(e) => handleUpdateGatheringPattern({ start_date: e.target.value })}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none text-sm"
                         />
                       </div>
                     </div>
@@ -3231,7 +3231,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                     value={memberSearchForGroup}
                     onChange={(e) => setMemberSearchForGroup(e.target.value)}
                     placeholder="Søk og legg til person..."
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-500 outline-none text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-md focus:ring-1 focus:ring-primary-500 outline-none text-sm"
                   />
                   {memberSearchForGroup && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -3290,7 +3290,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                           className={`p-3 rounded-lg border-2 cursor-pointer group transition-all ${
                             isLeader ? 'border-amber-300 bg-amber-50 hover:bg-amber-100 hover:border-amber-400' : 
                             isDeputyLeader ? 'border-blue-300 bg-blue-50 hover:bg-blue-100 hover:border-blue-400' : 
-                            'border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-400'
+                            'border-slate-200 bg-white hover:bg-slate-50 hover:border-primary-400'
                           }`}
                         >
                           <div className="flex items-center gap-3 mb-2">
@@ -3302,7 +3302,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                               {person.firstName.charAt(0)}
                             </div>
                             <div className="flex-1">
-                              <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">{person.firstName} {person.lastName}</p>
+                              <p className="font-semibold text-slate-900 group-hover:text-primary-600 transition-colors">{person.firstName} {person.lastName}</p>
                               {person.email && <p className="text-xs text-slate-500">{person.email}</p>}
                               {person.phone && <p className="text-xs text-slate-500">{person.phone}</p>}
                             </div>
@@ -3331,7 +3331,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                             <select
                               value={gm.service_role_id || ''}
                               onChange={(e) => handleUpdateMemberRole(gm.id, e.target.value || null)}
-                              className="flex-1 px-2 py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
+                              className="flex-1 px-2 py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary-500 outline-none"
                             >
                               <option value="">Tildel tjeneste-rolle...</option>
                               {db.serviceRoles.map(sr => (
@@ -3341,7 +3341,7 @@ const GroupsView: React.FC<Props> = ({ db, setDb, isAdmin, initialViewGroupId, i
                             <select
                               value={gm.role}
                               onChange={(e) => handleSetMemberRole(gm.id, e.target.value as GroupRole)}
-                              className="px-2 py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
+                              className="px-2 py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-primary-500 outline-none"
                             >
                               <option value={GroupRole.MEMBER}>Medlem</option>
                               <option value={GroupRole.DEPUTY_LEADER}>Nestleder</option>
