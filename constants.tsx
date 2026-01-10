@@ -14,11 +14,11 @@ const splitName = (fullName: string): { firstName: string; lastName: string } =>
 
 export const INITIAL_DATA: AppState = {
   persons: [
-    { id: 'p1', firstName: 'Anders', lastName: 'Admin', email: 'anders@lmk.no', phone: '900 11 001', is_admin: true, is_active: true, core_role: CoreRole.ADMIN },
-    { id: 'p2', firstName: 'Lise', lastName: 'Lovsang', email: 'lise@lmk.no', phone: '900 22 002', is_admin: false, is_active: true, core_role: CoreRole.TEAM_LEADER },
-    { id: 'p3', firstName: 'Tom', lastName: 'Tekniker', email: 'tom@lmk.no', phone: '900 33 003', is_admin: false, is_active: true, core_role: CoreRole.MEMBER },
-    { id: 'p5', firstName: 'Per', lastName: 'Pastor', email: 'per@lmk.no', phone: '900 55 005', is_admin: true, is_active: true, core_role: CoreRole.PASTOR },
-    { id: 'p7', firstName: 'Morten', lastName: 'Møtevert', email: 'morten@lmk.no', phone: '900 77 007', is_admin: false, is_active: true, core_role: CoreRole.MEMBER },
+    { id: 'p1', firstName: 'Anders', lastName: 'Admin', email: 'anders@lmk.no', phone: '900 11 001', postalCode: '4620', city: 'Kristiansand', is_admin: true, is_active: true, core_role: CoreRole.ADMIN },
+    { id: 'p2', firstName: 'Lise', lastName: 'Lovsang', email: 'lise@lmk.no', phone: '900 22 002', postalCode: '4630', city: 'Kristiansand', is_admin: false, is_active: true, core_role: CoreRole.TEAM_LEADER },
+    { id: 'p3', firstName: 'Tom', lastName: 'Tekniker', email: 'tom@lmk.no', phone: '900 33 003', postalCode: '4610', city: 'Kristiansand', is_admin: false, is_active: true, core_role: CoreRole.MEMBER },
+    { id: 'p5', firstName: 'Per', lastName: 'Pastor', email: 'per@lmk.no', phone: '900 55 005', postalCode: '4620', city: 'Kristiansand', is_admin: true, is_active: true, core_role: CoreRole.PASTOR },
+    { id: 'p7', firstName: 'Morten', lastName: 'Møtevert', email: 'morten@lmk.no', phone: '900 77 007', postalCode: '4640', city: 'Søgne', is_admin: false, is_active: true, core_role: CoreRole.MEMBER },
   ],
   groups: [
     { id: 'g1', name: 'Lovsang', category: GroupCategory.SERVICE, description: 'Ansvarlig for musikk og tilbedelse under gudstjenester.' },
